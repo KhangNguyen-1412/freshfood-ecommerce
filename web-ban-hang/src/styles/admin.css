@@ -1,0 +1,99 @@
+/* src/styles/admin.css */
+
+/* --- General Admin Page Styles --- */
+.admin-page-header {
+  @apply flex justify-between items-center mb-6 flex-wrap gap-2;
+}
+
+.admin-page-title {
+  @apply text-3xl font-bold;
+}
+
+.admin-button-green {
+  @apply px-4 py-2 bg-green-600 text-white rounded-md flex items-center;
+}
+
+.admin-button-blue {
+  @apply px-4 py-2 bg-blue-600 text-white rounded-md flex items-center;
+}
+
+.admin-button-teal {
+  @apply px-4 py-2 bg-teal-600 text-white rounded-md flex items-center;
+}
+
+.admin-table-container {
+  @apply bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mt-6 overflow-x-auto;
+}
+
+.admin-form-container {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4 mb-6 animate-fade-in;
+}
+
+/* --- AdminCustomerDetails Styles --- */
+.customer-detail-header {
+  @apply text-lg text-gray-700 dark:text-gray-300 mb-6;
+}
+
+.customer-order-card {
+  @apply bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md;
+}
+
+/* --- AdminDashboard Styles --- */
+.dashboard-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+}
+
+.dashboard-stat-card {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md;
+}
+
+.dashboard-stat-title {
+  @apply text-lg font-semibold text-gray-500 dark:text-gray-400;
+}
+
+.dashboard-stat-value {
+  @apply text-3xl font-bold mt-2;
+}
+
+.dashboard-main-grid {
+  @apply grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6;
+}
+
+.dashboard-chart-container {
+  @apply lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md;
+}
+
+.dashboard-recent-orders {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md;
+}
+
+/* --- Admin General Form & Table Styles --- */
+.admin-form {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4 mb-6;
+}
+
+.admin-form-title {
+  @apply text-2xl font-bold;
+}
+
+.admin-table {
+  @apply w-full;
+}
+
+.admin-table-header-row {
+  @apply border-b dark:border-gray-700;
+}
+
+.admin-table-body-row {
+  @apply border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700;
+}
+
+/* --- AdminReportsPage Styles --- */
+.reports-filter-bar {
+  @apply bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6 flex flex-wrap items-center gap-4;
+}
+
+/* --- AdminReviewsPage Styles --- */
+.reviews-search-bar {
+  @apply bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6;
+}

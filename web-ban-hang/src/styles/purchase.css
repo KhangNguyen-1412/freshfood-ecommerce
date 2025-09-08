@@ -1,0 +1,62 @@
+/* src/styles/purchase.css */
+
+/* --- General Modal Panel Styles --- */
+.purchase-modal-panel {
+  @apply bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl relative animate-fade-in;
+}
+
+/* --- PurchaseDetailModal Styles --- */
+.purchase-detail-panel {
+  @apply purchase-modal-panel w-full max-w-2xl h-[80vh] flex flex-col;
+}
+
+.purchase-detail-header {
+  @apply border-b dark:border-gray-700 pb-4 mb-4;
+}
+
+.purchase-detail-title {
+  @apply text-2xl font-bold;
+}
+
+.purchase-detail-id {
+  @apply font-mono text-sm text-gray-500;
+}
+
+.purchase-detail-info {
+  @apply text-sm text-gray-600 dark:text-gray-400 mt-2;
+}
+
+.purchase-detail-table-container {
+  @apply flex-grow overflow-y-auto pr-2;
+}
+
+.purchase-detail-footer {
+  @apply border-t dark:border-gray-700 pt-4 mt-auto flex justify-end items-center;
+}
+
+/* --- PurchaseForm Styles --- */
+.purchase-form-panel {
+  @apply purchase-modal-panel w-full max-w-4xl h-[90vh] flex flex-col;
+}
+
+.purchase-form-title {
+  @apply text-2xl font-bold mb-4;
+}
+
+.purchase-form-input-row {
+  @apply grid grid-cols-12 gap-2 mb-2 items-center;
+}
+
+.purchase-form-add-button {
+  @apply my-4 text-green-600 flex items-center hover:text-green-800;
+}
+
+/* --- PurchaseExcelUploadModal Styles --- */
+/* (Sử dụng lại .excel-modal-panel, .excel-modal-title từ category.css nếu muốn đồng bộ) */
+/* Hoặc tạo class mới */
+.purchase-excel-panel {
+  @apply purchase-modal-panel w-full max-w-lg;
+}
+.purchase-excel-title {
+  @apply text-2xl font-bold text-center mb-4;
+}

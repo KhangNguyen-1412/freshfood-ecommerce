@@ -1,0 +1,50 @@
+/* src/styles/checkout.css */
+
+/* Style cho khung modal */
+.promo-modal-panel {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-lg relative h-[70vh] flex flex-col;
+}
+
+/* Style cho tiêu đề modal */
+.promo-modal-title {
+  @apply text-2xl font-bold text-center mb-4;
+}
+
+/* Style cho khu vực input nhập mã */
+.promo-input-group {
+  @apply flex;
+}
+
+.promo-input {
+  @apply w-full p-2 border rounded-l-md dark:bg-gray-700 dark:border-gray-600;
+}
+
+.promo-apply-button {
+  @apply bg-gray-800 text-white px-4 rounded-r-md hover:bg-black;
+}
+
+/* Style cho danh sách các mã khuyến mãi */
+.promo-list {
+  @apply flex-grow overflow-y-auto space-y-3 pr-2;
+}
+
+/* Style cho mỗi item trong danh sách */
+.promo-item {
+  @apply border dark:border-gray-700 rounded-lg p-3 flex justify-between items-center;
+}
+
+.promo-item-code {
+  @apply font-bold text-green-600 flex items-center;
+}
+
+.promo-item-description {
+  @apply text-sm text-gray-600 dark:text-gray-400;
+}
+
+.promo-item-condition {
+  @apply text-xs text-gray-500;
+}
+
+.promo-item-select-button {
+  @apply px-3 py-1 text-sm bg-green-600 text-white rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed;
+}

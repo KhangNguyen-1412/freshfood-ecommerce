@@ -1,0 +1,68 @@
+/* src/styles/layout.css */
+
+/* --- Header Styles --- */
+.header {
+  @apply bg-white dark:bg-gray-800 shadow-md sticky top-0 z-40;
+}
+
+.header-container {
+  @apply container mx-auto px-4 py-3 flex justify-between items-center;
+}
+
+.header-brand {
+  @apply text-3xl font-bold text-green-700 flex items-center;
+}
+
+.header-search-input {
+  @apply w-full p-2 pl-10 border rounded-full bg-gray-100 dark:bg-gray-700 dark:border-gray-600 focus:bg-white focus:ring-2 focus:ring-green-500;
+}
+
+.header-action-button {
+  @apply text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-500;
+}
+
+.header-profile-menu {
+  @apply absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 z-50 animate-fade-in;
+}
+
+.header-profile-menu-item {
+  @apply w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center;
+}
+
+/* --- Footer Styles --- */
+.footer {
+  @apply bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 mt-12;
+}
+
+.footer-container {
+  @apply container mx-auto px-4 py-8;
+}
+
+.footer-section-title {
+  @apply font-semibold text-gray-800 dark:text-gray-200 mb-3;
+}
+
+.footer-link {
+  @apply hover:text-green-600;
+}
+
+/* --- AdminLayout Styles --- */
+.admin-layout {
+  @apply flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden;
+}
+
+.admin-sidebar {
+  @apply w-64 bg-gray-800 text-white p-4 flex flex-col;
+}
+
+.admin-sidebar-title {
+  @apply text-2xl font-bold mb-8;
+}
+
+.admin-sidebar-button {
+  @apply p-2 rounded hover:bg-gray-700 text-left flex items-center;
+}
+
+.admin-main-content {
+  @apply flex-1 p-8 overflow-y-auto;
+}

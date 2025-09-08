@@ -1,0 +1,58 @@
+/my-awesome-project
+|
+|-- 📂 public/              # Chứa các file tĩnh
+|   |-- favicon.ico
+|   |-- index.html
+|   |-- manifest.json
+|   |-- robots.txt
+|
+|-- 📂 src/                  # Thư mục chính chứa toàn bộ mã nguồn của bạn
+|   |
+|   |-- 📂 api/              # (Tùy chọn) Logic gọi API, kết nối backend
+|   |   |-- apiService.js
+|   |   |-- authService.js
+|   |
+|   |-- 📂 assets/           # Chứa các tài nguyên như ảnh, font chữ, icon...
+|   |   |-- images/
+|   |   |-- fonts/
+|   |   |-- icons/
+|   |
+|   |-- 📂 components/       # Chứa các component UI tái sử dụng
+|   |   |-- 📂 common/         # Các component chung nhất (Button, Input, Modal, Spinner...)
+|   |   |-- 📂 layout/         # Các component cấu trúc layout (Header, Footer, Sidebar, AdminLayout...)
+|   |   |-- 📂 product/        # Các component liên quan đến sản phẩm (ProductCard, ProductList...)
+|   |   |-- 📂 auth/           # Các component liên quan đến xác thực (LoginForm, RegisterForm...)
+|   |
+|   |-- 📂 context/          # (Hoặc redux/, zustand/) Quản lý trạng thái toàn cục
+|   |   |-- AppContext.js
+|   |   |-- AuthContext.js
+|   |
+|   |-- 📂 firebase/         # Cấu hình và các dịch vụ liên quan đến Firebase
+|   |   |-- config.js
+|   |
+|   |-- 📂 hooks/            # Chứa các custom hook tái sử dụng
+|   |   |-- useAuth.js
+|   |   |-- useFetch.js
+|   |
+|   |-- 📂 pages/            # Chứa các component đại diện cho một trang hoàn chỉnh
+|   |   |-- HomePage.js
+|   |   |-- ProfilePage.js
+|   |   |-- ProductDetailPage.js
+|   |   |-- AdminDashboardPage.js
+|   |   |-- NotFoundPage.js
+|   |
+|   |-- 📂 styles/           # Chứa các file style chung
+|   |   |-- index.css
+|   |   |-- variables.css
+|   |
+|   |-- 📂 utils/            # Chứa các hàm tiện ích, helper function
+|   |   |-- formatCurrency.js
+|   |   |-- validators.js
+|   |
+|   |-- App.js               # Component gốc, xử lý routing chính
+|   |-- index.js             # Điểm khởi đầu của ứng dụng
+|
+|-- .env                     # File biến môi trường
+|-- .gitignore               # Các file/thư mục được Git bỏ qua
+|-- package.json             # Quản lý các gói phụ thuộc và script
+|-- README.md                # Tài liệu hướng dẫn về dự án

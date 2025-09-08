@@ -1,0 +1,30 @@
+/* src/styles/ui.css */
+
+/* --- CategorySidebar Styles --- */
+.category-sidebar {
+  @apply w-full md:w-64 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md;
+}
+
+.category-sidebar-title {
+  @apply text-xl font-bold mb-4;
+}
+
+.category-sidebar-link {
+  @apply w-full text-left p-2 rounded-md;
+}
+
+.category-sidebar-link-all {
+  @apply font-semibold text-green-600 hover:underline;
+}
+
+.category-sidebar-parent-link {
+  @apply font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center;
+}
+
+.category-sidebar-child-list {
+  @apply pl-6 mt-1 border-l-2 border-green-200 dark:border-gray-700 animate-fade-in;
+}
+
+.category-sidebar-child-link {
+  @apply text-sm text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400;
+}

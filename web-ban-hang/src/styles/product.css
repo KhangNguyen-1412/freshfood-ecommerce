@@ -1,0 +1,97 @@
+/* src/styles/product.css */
+
+/* --- ProductCard Styles --- */
+.product-card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl duration-300 transition hover:scale-105;
+}
+
+.product-card-image-wrapper {
+  @apply relative cursor-pointer;
+}
+
+.product-card-image {
+  @apply w-full h-48 object-cover;
+}
+
+.product-card-wishlist-button {
+  @apply absolute top-2 left-2 bg-white bg-opacity-70 p-2 rounded-full text-gray-600 hover:text-red-500;
+}
+
+.product-card-badge {
+  @apply absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full;
+}
+
+.product-card-content {
+  @apply p-4;
+}
+
+.product-card-name {
+  @apply text-lg font-semibold text-gray-800 dark:text-gray-100 truncate;
+}
+
+.product-card-category {
+  @apply text-sm text-gray-500 dark:text-gray-400;
+}
+
+.product-card-price-original {
+  @apply text-sm line-through text-gray-500;
+}
+
+.product-card-price-sale {
+  @apply text-xl font-bold text-red-500;
+}
+
+.product-card-price-normal {
+  @apply text-xl font-bold text-green-600 dark:text-green-400;
+}
+
+.product-card-actions {
+  @apply flex gap-2 mt-4;
+}
+
+.product-card-add-button {
+  @apply flex-1 text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-semibold py-2 rounded-md hover:bg-green-200 dark:hover:bg-green-900/50;
+}
+
+.product-card-buy-button {
+  @apply flex-1 text-sm bg-blue-600 text-white font-semibold py-2 rounded-md hover:bg-blue-700;
+}
+
+/* --- ProductCarousel Styles --- */
+.carousel-section {
+  @apply mb-12;
+}
+
+.carousel-title {
+  @apply text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6;
+}
+
+.carousel-container {
+  @apply flex overflow-x-auto space-x-6 pb-4;
+}
+
+.carousel-item {
+  @apply flex-shrink-0 w-72;
+}
+
+/* --- ProductForm Styles --- */
+.product-form {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4 mb-6 animate-fade-in;
+}
+
+.product-form-input {
+  @apply w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600;
+}
+
+/* --- ProductCardSkeleton Styles --- */
+.skeleton-card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden animate-pulse;
+}
+
+.skeleton-image {
+  @apply w-full h-48 bg-gray-300 dark:bg-gray-700;
+}
+
+.skeleton-line {
+  @apply bg-gray-300 dark:bg-gray-700 rounded;
+}

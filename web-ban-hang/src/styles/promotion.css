@@ -1,0 +1,36 @@
+/* src/styles/promotion.css */
+
+/* Style cho khung form khuyến mãi */
+.promo-form-panel {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4 mb-6 animate-fade-in;
+}
+
+/* Style cho tiêu đề form */
+.promo-form-title {
+  @apply text-2xl font-bold;
+}
+
+/* Style chung cho input, textarea, select */
+.promo-form-control {
+  @apply w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600;
+}
+
+/* Style cho label */
+.promo-form-label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300;
+}
+
+/* Style cho khu vực chứa các nút bấm */
+.promo-form-actions {
+  @apply flex justify-end space-x-4;
+}
+
+/* Style cho nút Hủy */
+.promo-form-cancel-button {
+  @apply px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-md;
+}
+
+/* Style cho nút Lưu */
+.promo-form-save-button {
+  @apply px-4 py-2 bg-green-600 text-white rounded-md;
+}

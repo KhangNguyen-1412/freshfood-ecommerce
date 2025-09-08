@@ -1,0 +1,56 @@
+/* src/styles/profile.css */
+
+/* --- ProfileTabs Styles --- */
+.profile-tabs-nav {
+  @apply relative flex space-x-8 border-b dark:border-gray-700;
+}
+
+.profile-tab-button {
+  @apply py-4 font-semibold transition-colors duration-300;
+}
+
+.profile-tab-button-active {
+  @apply text-green-600;
+}
+
+.profile-tab-button-inactive {
+  @apply text-gray-500 hover:text-gray-800 dark:hover:text-gray-200;
+}
+
+.profile-tab-underline {
+  @apply absolute bottom-0 h-0.5 bg-green-600 transition-all duration-300 ease-in-out;
+}
+
+/* --- AddressForm Styles --- */
+.address-form-panel {
+  @apply bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md relative;
+}
+
+.address-form-title {
+  @apply text-2xl font-bold text-center text-green-700 dark:text-green-400 mb-6;
+}
+
+.address-form-actions {
+  @apply flex justify-end space-x-4;
+}
+
+.address-form-cancel-button {
+  @apply px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded;
+}
+
+.address-form-save-button {
+  @apply px-4 py-2 bg-green-600 text-white rounded;
+}
+
+/* --- WishlistTab Styles --- */
+.wishlist-empty-container {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md;
+}
+
+.wishlist-empty-text {
+  @apply text-center text-gray-500 py-8;
+}
+
+.wishlist-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+}

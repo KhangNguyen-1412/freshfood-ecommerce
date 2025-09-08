@@ -1,0 +1,97 @@
+/* src/styles/pages.css */
+
+/* --- General Page Styles --- */
+.page-container {
+  @apply container mx-auto px-4 py-8;
+}
+
+.page-title {
+  @apply text-3xl font-bold mb-6;
+}
+
+.page-section {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md;
+}
+
+/* --- HomePage Styles --- */
+.home-hero-banner {
+  @apply relative bg-green-100 dark:bg-gray-800 rounded-lg mb-12 h-[400px] overflow-hidden;
+}
+
+.home-main-grid {
+  @apply flex flex-col md:flex-row gap-8;
+}
+
+.home-filter-bar {
+  @apply flex justify-between items-center mb-6 flex-wrap gap-4;
+}
+
+/* --- CartPage Styles --- */
+.cart-empty-container {
+  @apply container mx-auto text-center py-20;
+}
+
+.cart-grid {
+  @apply grid grid-cols-1 lg:grid-cols-3 gap-8;
+}
+
+.cart-item-list {
+  @apply lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md;
+}
+
+.cart-summary {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md h-fit;
+}
+
+.cart-summary-title {
+  @apply text-xl font-bold border-b pb-4;
+}
+
+.cart-checkout-button {
+  @apply mt-6 w-full bg-green-600 text-white py-3 rounded-md font-semibold hover:bg-green-700;
+}
+
+/* --- ProductDetailPage Styles --- */
+.product-detail-main-panel {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8;
+}
+
+.product-detail-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-8;
+}
+
+.product-detail-title {
+  @apply text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2;
+}
+
+.product-detail-reviews-panel {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mt-8;
+}
+
+/* --- ReviewOrderPage Styles --- */
+.review-item-card {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex gap-6;
+}
+
+.review-submit-button {
+  @apply bg-green-600 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-green-700 disabled:bg-gray-400;
+}
+
+/* --- FAQ & Content Page Styles --- */
+.content-title {
+  @apply text-4xl font-bold mb-8 text-center;
+}
+.content-body {
+  @apply max-w-3xl mx-auto prose dark:prose-invert;
+}
+
+/* --- BranchSelector Styles --- */
+.branch-selector-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50;
+}
+.branch-selector-panel {
+  @apply bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md text-center;
+}
+.branch-selector-button {
+  @apply w-full py-3 rounded-md font-semibold;
+}

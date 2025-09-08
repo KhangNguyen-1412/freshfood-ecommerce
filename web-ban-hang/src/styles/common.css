@@ -1,0 +1,122 @@
+/* src/styles/common.css */
+
+/* --- Button Styles --- */
+.btn {
+  @apply px-4 py-2 font-semibold rounded-md transition-colors duration-200;
+}
+
+.btn-primary {
+  @apply bg-green-600 text-white hover:bg-green-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600;
+}
+
+/* --- Card Styles --- */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden;
+}
+
+/* --- Avatar Styles --- */
+.avatar {
+  @apply rounded-full object-cover;
+}
+
+.avatar-sm {
+  @apply h-8 w-8;
+}
+
+.avatar-md {
+  @apply h-12 w-12;
+}
+
+.avatar-lg {
+  @apply h-24 w-24;
+}
+
+/* --- Modal Styles --- */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 animate-fade-in;
+}
+
+.modal-panel {
+  @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md relative;
+}
+
+.modal-header {
+  @apply flex justify-between items-center mb-4 border-b pb-3;
+}
+
+.modal-title {
+  @apply text-xl font-bold;
+}
+
+.modal-close-button {
+  @apply text-gray-500 hover:text-gray-800 dark:hover:text-white;
+}
+
+/* --- Input Styles --- */
+.input-wrapper {
+  @apply w-full;
+}
+
+.input-label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+}
+
+.input-field {
+  @apply w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400;
+}
+
+/* --- Pagination Styles --- */
+.pagination-container {
+  @apply flex justify-center items-center space-x-2 mt-8;
+}
+
+.pagination-button {
+  @apply px-4 py-2 rounded-md text-sm font-semibold;
+}
+
+.pagination-button-inactive {
+  @apply bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700;
+}
+
+.pagination-button-active {
+  @apply bg-green-600 text-white;
+}
+
+/* --- Spinner Styles --- */
+.spinner-container {
+  @apply flex justify-center items-center;
+}
+
+.spinner-indicator {
+  @apply animate-spin rounded-full border-green-600;
+}
+
+/* --- ToggleSwitch Styles --- */
+.toggle-switch-label {
+  @apply relative inline-flex items-center cursor-pointer;
+}
+
+.toggle-switch-input {
+  @apply sr-only;
+}
+
+/* --- StarRating Styles --- */
+.star-rating-container {
+  @apply flex;
+}
+
+.star {
+  @apply text-gray-300 dark:text-gray-600;
+}
+
+.star-active {
+  @apply text-yellow-400;
+}
+
+.star-editable {
+  @apply cursor-pointer;
+}

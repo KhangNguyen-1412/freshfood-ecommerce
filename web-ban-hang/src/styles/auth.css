@@ -1,0 +1,34 @@
+/* Style chung cho khung modal (panel) */
+.auth-panel {
+  @apply bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md relative;
+}
+
+/* Style cho tiêu đề chung */
+.auth-title {
+  @apply text-2xl font-bold text-center mb-6;
+}
+
+/* Style cho nút chính (Đăng nhập, Gửi...) */
+.auth-submit-button {
+  @apply w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition-colors;
+}
+
+/* Style cho nút nguy hiểm (Xác nhận xóa) */
+.auth-danger-button {
+  @apply w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-400;
+}
+
+/* Style cho thông báo lỗi */
+.auth-error-message {
+  @apply bg-red-100 text-red-700 p-2 rounded mb-4 text-sm;
+}
+
+/* Style cho thông báo thành công/thông tin */
+.auth-info-message {
+  @apply bg-green-100 text-green-700 p-2 rounded mb-4 text-sm;
+}
+
+/* Style cho input field */
+.auth-input {
+  @apply w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600;
+}
