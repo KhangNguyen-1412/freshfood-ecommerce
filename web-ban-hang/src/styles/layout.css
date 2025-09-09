@@ -1,5 +1,3 @@
-/* src/styles/layout.css */
-
 /* --- Header Styles --- */
 .header {
   @apply bg-white dark:bg-gray-800 shadow-md sticky top-0 z-40;
@@ -19,6 +17,10 @@
 
 .header-action-button {
   @apply text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-500;
+}
+
+.header-profile-button {
+  @apply text-gray-700 dark:text-gray-200 font-semibold hover:text-green-600 dark:hover:text-green-500;
 }
 
 .header-profile-menu {

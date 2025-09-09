@@ -1,7 +1,5 @@
-// src/components/layout/Header.js
-
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"; // <-- Import Link và useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import {
@@ -21,7 +19,7 @@ import { useAppContext } from "../../context/AppContext";
 import { auth } from "../../firebase/config";
 import AuthModal from "../auth/AuthModal";
 import ForgotPasswordModal from "../auth/ForgotPasswordModal";
-import "../../styles/layout.css"; // Import file CSS
+import "../../styles/layout.css";
 
 const Header = () => {
   const {
@@ -39,7 +37,7 @@ const Header = () => {
     clearCart,
   } = useAppContext();
 
-  const navigate = useNavigate(); // <-- Khởi tạo hook useNavigate
+  const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -59,7 +57,7 @@ const Header = () => {
         }
         await signOut(auth);
         setShowProfileMenu(false);
-        navigate("/"); // <-- Dùng navigate để chuyển về trang chủ
+        navigate("/");
         toast.success("Đã đăng xuất thành công.");
       } catch (error) {
         toast.error("Đã có lỗi xảy ra khi đăng xuất.");
@@ -71,7 +69,7 @@ const Header = () => {
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
       setSearchQuery(localSearch);
-      navigate("/"); // <-- Dùng navigate để về trang chủ hiển thị kết quả
+      navigate("/");
     }
   };
 
@@ -157,7 +155,6 @@ const Header = () => {
               {theme === "light" ? <Moon size={22} /> : <Sun size={22} />}
             </button>
 
-            {/* THAY THẾ <button> BẰNG <Link> */}
             <Link to="/cart" className="relative header-action-button">
               <ShoppingCart size={24} />
               {cart.length > 0 && (
@@ -171,7 +168,8 @@ const Header = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center space-x-2"
+                  // === CLASS MỚI ĐƯỢC ÁP DỤNG VÀO ĐÂY ===
+                  className="flex items-center space-x-2 header-profile-button"
                 >
                   <img
                     src={
@@ -180,7 +178,8 @@ const Header = () => {
                     alt="avatar"
                     className="h-8 w-8 rounded-full object-cover"
                   />
-                  <span className="hidden lg:inline font-semibold">
+                  {/* Bỏ font-semibold ở đây vì đã có trong class mới */}
+                  <span className="hidden lg:inline">
                     {userData?.displayName || "User"}
                   </span>
                 </button>
