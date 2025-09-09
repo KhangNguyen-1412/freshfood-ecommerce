@@ -12,7 +12,7 @@ import { db } from "../../firebase/config";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import { X, Upload } from "lucide-react";
-import "../../styles/category.css"; // <-- IMPORT FILE CSS
+import "../../styles/category.css";
 
 const CategoryExcelUploadModal = ({ onCancel, onUploadSuccess }) => {
   const [file, setFile] = useState(null);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { toast } from "react-toastify";
 import { db } from "../../firebase/config";
-import "../../styles/product.css"; // <-- Import file CSS
+import "../../styles/product.css";
 
 const ProductForm = ({ product, onSave, onCancel, branches, brands }) => {
   const getInitialData = useCallback(() => {

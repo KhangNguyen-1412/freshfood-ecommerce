@@ -1,16 +1,16 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom"; // <-- THÊM IMPORT
+import { Link, useNavigate } from "react-router-dom";
 import { Leaf, Facebook, Instagram, Linkedin } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import "../../styles/layout.css";
 
 const Footer = () => {
   const { brands, setBrandFilter } = useAppContext();
-  const navigate = useNavigate(); // <-- Hook đã được import
+  const navigate = useNavigate();
 
   const handleBrandClick = (brandId) => {
     setBrandFilter(brandId);
-    navigate("/"); // Chuyển về trang chủ
+    navigate("/");
   };
 
   return (

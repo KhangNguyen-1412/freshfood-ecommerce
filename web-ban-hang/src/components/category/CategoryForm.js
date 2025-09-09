@@ -1,7 +1,5 @@
-// src/components/category/CategoryForm.js
-
 import React, { useState, useEffect } from "react";
-import "../../styles/category.css"; // <-- IMPORT FILE CSS
+import "../../styles/category.css";
 
 const CategoryForm = ({ category, onSave, onCancel, parentCategories }) => {
   const [formData, setFormData] = useState({ name: "", parentId: null });

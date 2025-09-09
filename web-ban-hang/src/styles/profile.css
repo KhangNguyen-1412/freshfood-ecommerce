@@ -1,5 +1,3 @@
-/* src/styles/profile.css */
-
 /* --- ProfileTabs Styles --- */
 .profile-tabs-nav {
   @apply relative flex space-x-8 border-b dark:border-gray-700;

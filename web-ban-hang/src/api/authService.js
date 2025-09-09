@@ -1,6 +1,5 @@
 import apiService from "./apiService";
 
-// Đối tượng chứa tất cả các phương thức gọi API liên quan đến xác thực
 const authService = {
   /**
    * Gửi yêu cầu đăng nhập đến server.

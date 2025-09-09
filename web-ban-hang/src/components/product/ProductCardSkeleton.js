@@ -1,5 +1,5 @@
 import React from "react";
-import "../../styles/product.css"; // <-- Import file CSS
+import "../../styles/product.css";
 
 const ProductCardSkeleton = () => (
   <div className="skeleton-card">

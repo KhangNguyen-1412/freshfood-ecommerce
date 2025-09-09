@@ -1,5 +1,3 @@
-// src/pages/admin/StaffDashboard.js
-
 import React, { useState, useEffect } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/config";
@@ -22,7 +20,6 @@ const StaffDashboard = () => {
       setStats((prev) => ({ ...prev, newOrders: snapshot.size }));
     });
 
-    // Giả sử tồn kho < 10 là mức thấp
     const lowStockQuery = query(
       collection(db, "products"),
       where("stock", "<", 10)

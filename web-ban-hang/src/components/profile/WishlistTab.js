@@ -1,12 +1,10 @@
-// src/components/profile/WishlistTab.js
-
 import React, { useState, useEffect } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useAppContext } from "../../context/AppContext";
 import ProductCard from "../product/ProductCard";
 import Spinner from "../common/Spinner";
-import "../../styles/profile.css"; // <-- Import file CSS
+import "../../styles/profile.css";
 
 const WishlistTab = () => {
   const { wishlist } = useAppContext();

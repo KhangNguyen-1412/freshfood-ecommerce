@@ -1,10 +1,8 @@
-// src/components/profile/AddressForm.js
-
 import React, { useState } from "react";
 import { X } from "lucide-react";
-import "../../styles/common.css"; // Dùng lại modal-overlay từ common
-import "../../styles/profile.css"; // Dùng style của profile
-import "../../styles/auth.css"; // Dùng lại auth-input cho đồng bộ
+import "../../styles/common.css";
+import "../../styles/profile.css";
+import "../../styles/auth.css";
 
 const AddressForm = ({ address, onSave, onCancel }) => {
   const [formData, setFormData] = useState(

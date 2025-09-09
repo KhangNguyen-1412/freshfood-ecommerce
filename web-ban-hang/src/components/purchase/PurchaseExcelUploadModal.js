@@ -14,8 +14,8 @@ import { db } from "../../firebase/config";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import { X, Upload } from "lucide-react";
-import "../../styles/purchase.css"; // <-- Import file CSS
-import "../../styles/category.css"; // Dùng lại style của excel-instructions
+import "../../styles/purchase.css";
+import "../../styles/category.css";
 
 const PurchaseExcelUploadModal = ({ onCancel, onUploadSuccess }) => {
   const [file, setFile] = useState(null);

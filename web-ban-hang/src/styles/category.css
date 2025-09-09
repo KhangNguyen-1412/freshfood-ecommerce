@@ -1,5 +1,3 @@
-/* src/styles/category.css */
-
 /* Style cho khung form và modal */
 .category-panel {
   @apply bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4 mb-6 animate-fade-in;

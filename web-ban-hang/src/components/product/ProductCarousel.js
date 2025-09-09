@@ -1,7 +1,7 @@
 import React from "react";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
-import "../../styles/product.css"; // <-- Import file CSS
+import "../../styles/product.css";
 
 const ProductCarousel = ({ title, products, loading }) => {
   if (loading) {

@@ -1,9 +1,7 @@
-// src/pages/admin/AdminReviewsPage.js
-
 import React, { useState, useEffect } from "react";
 import {
   collection,
-  getDocs, // THÊM getDocs VÀO ĐÂY
+  getDocs,
   collectionGroup,
   query,
   orderBy,

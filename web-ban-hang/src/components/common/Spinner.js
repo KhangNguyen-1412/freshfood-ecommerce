@@ -1,7 +1,5 @@
-// src/components/common/Spinner.js
-
 import React from "react";
-import "../../styles/common.css"; // <-- Import file CSS
+import "../../styles/common.css";
 
 const Spinner = ({ size = "md" }) => {
   const sizeClasses = {

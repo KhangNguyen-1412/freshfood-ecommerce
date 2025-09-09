@@ -77,7 +77,6 @@ const Header = () => {
     <>
       <header className="header">
         <div className="header-container">
-          {/* THAY THẾ <button> BẰNG <Link> */}
           <Link to="/" className="header-brand">
             <Leaf size={32} className="mr-2" />
             FreshFood
@@ -168,7 +167,6 @@ const Header = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  // === CLASS MỚI ĐƯỢC ÁP DỤNG VÀO ĐÂY ===
                   className="flex items-center space-x-2 header-profile-button"
                 >
                   <img
@@ -178,14 +176,12 @@ const Header = () => {
                     alt="avatar"
                     className="h-8 w-8 rounded-full object-cover"
                   />
-                  {/* Bỏ font-semibold ở đây vì đã có trong class mới */}
                   <span className="hidden lg:inline">
                     {userData?.displayName || "User"}
                   </span>
                 </button>
                 {showProfileMenu && (
                   <div className="header-profile-menu">
-                    {/* THAY THẾ <button> BẰNG <Link> */}
                     <Link
                       to="/profile"
                       onClick={() => setShowProfileMenu(false)}
@@ -195,7 +191,7 @@ const Header = () => {
                     </Link>
                     {userData?.role === "admin" && (
                       <Link
-                        to="/admin" // Chuyển đến trang dashboard admin
+                        to="/admin"
                         onClick={() => setShowProfileMenu(false)}
                         className="header-profile-menu-item"
                       >

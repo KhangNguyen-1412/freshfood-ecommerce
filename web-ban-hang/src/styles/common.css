@@ -1,5 +1,3 @@
-/* src/styles/common.css */
-
 /* --- Button Styles --- */
 .btn {
   @apply px-4 py-2 font-semibold rounded-md transition-colors duration-200;

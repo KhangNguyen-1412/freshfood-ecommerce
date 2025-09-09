@@ -1,5 +1,3 @@
-// src/pages/admin/AdminDashboard.js
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";

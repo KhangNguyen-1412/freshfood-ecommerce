@@ -1,15 +1,13 @@
-// src/components/product/ProductCard.js
-
 import React from "react";
-import { useNavigate } from "react-router-dom"; // <-- Import useNavigate
+import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import { formatCurrency } from "../../utils/formatCurrency";
-import "../../styles/product.css"; // Import file CSS
+import "../../styles/product.css";
 
 const ProductCard = ({ product }) => {
   const { addToCart, user, wishlist, toggleWishlist } = useAppContext();
-  const navigate = useNavigate(); // <-- Khởi tạo hook
+  const navigate = useNavigate(); // Khởi tạo hook
 
   // Hàm xử lý khi click vào toàn bộ thẻ sản phẩm
   const handleCardClick = () => {

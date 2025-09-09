@@ -1,7 +1,5 @@
-// src/components/promotion/PromotionForm.js
-
 import React, { useState, useEffect } from "react";
-import "../../styles/promotion.css"; // <-- Import file CSS
+import "../../styles/promotion.css";
 
 const PromotionForm = ({ promotion, onSave, onCancel }) => {
   const [formData, setFormData] = useState({

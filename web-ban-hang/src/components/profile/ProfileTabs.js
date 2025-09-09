@@ -1,7 +1,5 @@
-// src/components/profile/ProfileTabs.js
-
 import React, { useState, useEffect, useRef } from "react";
-import "../../styles/profile.css"; // <-- Import file CSS
+import "../../styles/profile.css";
 
 const tabs = [
   { key: "orders", label: "Lịch sử đơn hàng" },

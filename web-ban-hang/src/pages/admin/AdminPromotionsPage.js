@@ -1,5 +1,3 @@
-// src/pages/admin/AdminPromotionsPage.js
-
 import React, { useState, useEffect } from "react";
 import {
   collection,
@@ -19,7 +17,7 @@ import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
 
 import Spinner from "../../components/common/Spinner";
-import PromotionForm from "../../components/promotion/PromotionForm"; // Cần tạo file này
+import PromotionForm from "../../components/promotion/PromotionForm";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { Edit, Trash2 } from "lucide-react";
 

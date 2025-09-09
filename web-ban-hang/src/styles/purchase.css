@@ -1,5 +1,3 @@
-/* src/styles/purchase.css */
-
 /* --- General Modal Panel Styles --- */
 .purchase-modal-panel {
   @apply bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl relative animate-fade-in;

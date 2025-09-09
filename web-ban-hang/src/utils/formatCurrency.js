@@ -1,5 +1,3 @@
-// src/utils/formatCurrency.js
-
 /**
  * Định dạng một số thành chuỗi tiền tệ Việt Nam (VND).
  * @param {number} amount - Số tiền cần định dạng.

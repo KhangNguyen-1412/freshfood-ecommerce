@@ -1,7 +1,5 @@
-// src/components/common/StarRating.js
-
 import React, { useState } from "react";
-import "../../styles/common.css"; // <-- Import file CSS
+import "../../styles/common.css";
 
 const StarRating = ({
   rating = 0,

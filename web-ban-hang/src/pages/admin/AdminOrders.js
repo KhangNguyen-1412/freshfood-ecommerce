@@ -1,5 +1,3 @@
-// src/pages/admin/AdminOrders.js
-
 import React, { useState, useEffect } from "react";
 import {
   collection,

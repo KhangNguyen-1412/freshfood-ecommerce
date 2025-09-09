@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { toast } from "react-toastify";
 import { X, Tag } from "lucide-react";
 import { formatCurrency } from "../../utils/formatCurrency";
-import "../../styles/checkout.css"; // <-- IMPORT FILE CSS
+import "../../styles/checkout.css";
 
 const PromoCodeModal = ({
   availablePromos,

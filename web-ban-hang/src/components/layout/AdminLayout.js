@@ -21,16 +21,16 @@ import {
   Building,
   Copyright,
 } from "lucide-react";
-import "../../styles/layout.css"; // Import file CSS
+import "../../styles/layout.css";
 
 const AdminLayout = ({ children }) => {
   const { userData } = useAppContext();
-  const navigate = useNavigate(); // <-- Khởi tạo hook useNavigate
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate("/"); // <-- Dùng navigate để chuyển về trang chủ
+      navigate("/");
     } catch (error) {
       console.error("Lỗi đăng xuất:", error);
     }
@@ -41,7 +41,6 @@ const AdminLayout = ({ children }) => {
       <aside className="admin-sidebar">
         <h2 className="admin-sidebar-title">Admin Panel</h2>
         <nav className="flex flex-col space-y-2 flex-grow overflow-y-auto">
-          {/* --- THAY THẾ TẤT CẢ <button> BẰNG <Link> --- */}
           <Link to="/admin" className="admin-sidebar-button">
             <Shield size={18} className="mr-2" />
             Dashboard

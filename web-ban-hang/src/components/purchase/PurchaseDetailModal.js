@@ -1,9 +1,7 @@
-// src/components/purchase/PurchaseDetailModal.js
-
 import React from "react";
 import { X } from "lucide-react";
 import { formatCurrency } from "../../utils/formatCurrency";
-import "../../styles/purchase.css"; // <-- Import file CSS
+import "../../styles/purchase.css";
 
 const PurchaseDetailModal = ({ purchase, onClose }) => {
   if (!purchase) return null;
