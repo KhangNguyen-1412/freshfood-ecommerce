@@ -116,27 +116,44 @@ const CheckoutPage = () => {
   }, [selectedAddressId, addresses]);
 
   useEffect(() => {
-    if (paymentMethod === "QR" && finalTotal > 0) {
-      const bankInfo = {
-        accountNo: "101877135020",
-        accountName: "NGUYEN HUYNH PHUC KHANG",
-        acqId: "970415",
-        template: "compact",
-      };
-      const orderInfo = `Thanh toan don hang ${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
-      const qrUrl = `https://api.vietqr.io/v2/generate?accountNo=${
-        bankInfo.accountNo
-      }&accountName=${encodeURIComponent(bankInfo.accountName)}&acqId=${
-        bankInfo.acqId
-      }&amount=${finalTotal}&addInfo=${encodeURIComponent(
-        orderInfo
-      )}&template=${bankInfo.template}`;
-      setQrCodeUrl(qrUrl);
-    } else {
-      setQrCodeUrl("");
-    }
+    // Tạo một hàm async bên trong để gọi API
+    const generateQrCode = async () => {
+      if (paymentMethod === "QR" && finalTotal > 0) {
+        try {
+          const orderInfo = `Thanh toan don hang ${Math.random()
+            .toString(36)
+            .substring(2, 9)}`;
+
+          // Gọi đến API của chính bạn
+          const response = await fetch("/api/generate-qr", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              amount: finalTotal,
+              addInfo: orderInfo,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Lỗi khi tạo mã QR từ server");
+          }
+
+          const data = await response.json();
+          // Cập nhật state với dữ liệu Base64 nhận được
+          setQrCodeUrl(data.qrDataURL);
+        } catch (error) {
+          console.error("Không thể lấy mã QR:", error);
+          toast.error("Không thể tạo mã QR, vui lòng thử lại.");
+          setQrCodeUrl(""); // Xóa mã QR cũ nếu có lỗi
+        }
+      } else {
+        setQrCodeUrl(""); // Xóa mã QR khi không chọn phương thức này
+      }
+    };
+
+    generateQrCode();
   }, [paymentMethod, finalTotal]);
 
   const handleApplyPromo = (promoToApply) => {
