@@ -76,10 +76,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/newsletter"
-                  className="footer-link font-semibold text-green-600"
-                >
+                <Link to="/dang-ky-nha-tin" className="footer-link">
                   Đăng ký nhận tin
                 </Link>
               </li>
