@@ -69,3 +69,5 @@ node_modules/
 .dataconnect
 
 serviceAccountKey.json
+
+.env.local

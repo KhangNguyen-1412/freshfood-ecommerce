@@ -25,11 +25,16 @@ import { ArrowLeft, PlusCircle, Tag } from "lucide-react";
 import "../styles/pages.css";
 import SEO from "../components/common/SEO";
 
+import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
+
 const CheckoutPage = () => {
-  const { user, userData, cart, removeItemsFromCart, selectedBranch } =
+  const { user, userData, cart, removeItemsFromCart, selectedBranch, theme } =
     useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const stripe = useStripe();
+  const elements = useElements();
 
   const itemsToCheckout =
     location.state?.itemsForCheckout ||
@@ -43,9 +48,7 @@ const CheckoutPage = () => {
     phone: "",
     address: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState(
-    userData?.defaultPaymentMethod || "COD"
-  );
+  const [paymentMethod, setPaymentMethod] = useState("COD");
   const [isProcessing, setIsProcessing] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [availablePromos, setAvailablePromos] = useState([]);
@@ -158,6 +161,67 @@ const CheckoutPage = () => {
     setShowAddressForm(false);
   };
 
+  // TÁCH LOGIC TẠO ORDER RA HÀM RIÊNG ĐỂ DÙNG LẠI
+  const createOrderInFirestore = async (paymentIntentId = null) => {
+    await runTransaction(db, async (transaction) => {
+      for (const item of itemsToCheckout) {
+        const inventoryRef = doc(
+          db,
+          "products",
+          item.id,
+          "inventory",
+          selectedBranch.id
+        );
+        const inventoryDoc = await transaction.get(inventoryRef);
+        if (
+          !inventoryDoc.exists() ||
+          inventoryDoc.data().stock < item.quantity
+        ) {
+          throw new Error(`Sản phẩm "${item.name}" không đủ số lượng.`);
+        }
+      }
+      const newOrderRef = doc(collection(db, "orders"));
+      const orderData = {
+        userId: user.uid,
+        items: itemsToCheckout,
+        shippingInfo,
+        paymentMethod,
+        paymentIntentId,
+        status: paymentMethod === "COD" ? "Đang xử lý" : "Đã thanh toán",
+        createdAt: serverTimestamp(),
+        branchId: selectedBranch.id,
+        subtotal,
+        discount: totalDiscount,
+        appliedPromos: appliedPromos.map((p) => ({
+          code: p.code,
+          discountType: p.discountType,
+          discountValue: p.discountValue,
+        })),
+        totalAmount: finalTotal,
+      };
+      transaction.set(newOrderRef, orderData);
+      for (const item of itemsToCheckout) {
+        const productRef = doc(db, "products", item.id);
+        const inventoryRef = doc(
+          db,
+          "products",
+          item.id,
+          "inventory",
+          selectedBranch.id
+        );
+        transaction.update(inventoryRef, { stock: increment(-item.quantity) });
+        transaction.update(productRef, {
+          purchaseCount: increment(item.quantity),
+        });
+      }
+    });
+    const purchasedItemIds = itemsToCheckout.map((item) => item.id);
+    if (!location.state?.buyNowItem) {
+      await removeItemsFromCart(purchasedItemIds);
+    }
+    setAppliedPromos([]);
+  };
+
   const handlePlaceOrder = async () => {
     if (!user || !selectedAddressId || !shippingInfo.name || !selectedBranch) {
       toast.error(
@@ -166,67 +230,41 @@ const CheckoutPage = () => {
       return;
     }
     setIsProcessing(true);
+
     try {
-      await runTransaction(db, async (transaction) => {
-        for (const item of itemsToCheckout) {
-          const inventoryRef = doc(
-            db,
-            "products",
-            item.id,
-            "inventory",
-            selectedBranch.id
-          );
-          const inventoryDoc = await transaction.get(inventoryRef);
-          if (
-            !inventoryDoc.exists() ||
-            inventoryDoc.data().stock < item.quantity
-          ) {
-            throw new Error(`Sản phẩm "${item.name}" không đủ số lượng.`);
-          }
+      if (paymentMethod === "STRIPE_CARD") {
+        if (!stripe || !elements) throw new Error("Stripe chưa sẵn sàng.");
+
+        // 1. Gọi API backend để tạo Payment Intent
+        const res = await fetch("/api/create-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: finalTotal }),
+        });
+        const { clientSecret, error: backendError } = await res.json();
+        if (backendError) throw new Error(backendError.message);
+
+        // 2. Xác nhận thanh toán trên client
+        const cardElement = elements.getElement(CardElement);
+        const paymentResult = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: { name: shippingInfo.name },
+          },
+        });
+        if (paymentResult.error) throw new Error(paymentResult.error.message);
+
+        // 3. Nếu thành công, tạo đơn hàng trên Firestore
+        if (paymentResult.paymentIntent.status === "succeeded") {
+          await createOrderInFirestore(paymentResult.paymentIntent.id);
+          toast.success("Thanh toán và đặt hàng thành công!");
+          navigate("/profile", { replace: true });
         }
-        const newOrderRef = doc(collection(db, "orders"));
-        const orderData = {
-          userId: user.uid,
-          items: itemsToCheckout,
-          shippingInfo,
-          paymentMethod,
-          status: "Đang xử lý",
-          createdAt: serverTimestamp(),
-          branchId: selectedBranch.id,
-          subtotal,
-          discount: totalDiscount,
-          appliedPromos: appliedPromos.map((p) => ({
-            code: p.code,
-            discountType: p.discountType,
-            discountValue: p.discountValue,
-          })),
-          totalAmount: finalTotal,
-        };
-        transaction.set(newOrderRef, orderData);
-        for (const item of itemsToCheckout) {
-          const productRef = doc(db, "products", item.id);
-          const inventoryRef = doc(
-            db,
-            "products",
-            item.id,
-            "inventory",
-            selectedBranch.id
-          );
-          transaction.update(inventoryRef, {
-            stock: increment(-item.quantity),
-          });
-          transaction.update(productRef, {
-            purchaseCount: increment(item.quantity),
-          });
-        }
-      });
-      const purchasedItemIds = itemsToCheckout.map((item) => item.id);
-      if (!location.state?.buyNowItem) {
-        await removeItemsFromCart(purchasedItemIds);
+      } else {
+        await createOrderInFirestore();
+        toast.success("Đặt hàng thành công!");
+        navigate("/profile", { replace: true });
       }
-      setAppliedPromos([]);
-      toast.success("Đặt hàng thành công!");
-      navigate("/profile", { replace: true });
     } catch (error) {
       console.error("Lỗi khi đặt hàng:", error);
       toast.error(`Đặt hàng thất bại: ${error.message}`);
@@ -326,6 +364,33 @@ const CheckoutPage = () => {
                 />
                 Chuyển khoản qua mã QR
               </label>
+              <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="STRIPE_CARD"
+                  checked={paymentMethod === "STRIPE_CARD"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
+                />
+                Thanh toán qua thẻ (Visa, Mastercard)
+              </label>
+              {paymentMethod === "STRIPE_CARD" && (
+                <div className="p-4 border dark:border-gray-700 rounded-md mt-2 animate-fade-in">
+                  <CardElement
+                    options={{
+                      style: {
+                        base: {
+                          fontSize: "16px",
+                          color: theme === "dark" ? "#FFF" : "#424770",
+                          "::placeholder": { color: "#aab7c4" },
+                        },
+                        invalid: { color: "#9e2146" },
+                      },
+                    }}
+                  />
+                </div>
+              )}
             </div>
             {paymentMethod === "QR" && qrCodeUrl && (
               <div className="mt-6 p-4 border rounded-lg flex flex-col items-center animate-fade-in">
