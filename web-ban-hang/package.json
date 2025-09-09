@@ -9,7 +9,6 @@
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.11.0",
     "exceljs": "^4.4.0",
     "firebase": "^12.1.0",
     "firebase-admin": "^13.4.0",

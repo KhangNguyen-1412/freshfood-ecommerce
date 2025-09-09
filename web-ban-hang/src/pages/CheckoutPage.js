@@ -24,7 +24,6 @@ import PromoCodeModal from "../components/checkout/PromoCodeModal";
 import { ArrowLeft, PlusCircle, Tag } from "lucide-react";
 import "../styles/pages.css";
 import SEO from "../components/common/SEO";
-
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 
 const CheckoutPage = () => {
@@ -50,7 +49,6 @@ const CheckoutPage = () => {
   });
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [availablePromos, setAvailablePromos] = useState([]);
   const [appliedPromos, setAppliedPromos] = useState([]);
   const [showPromoModal, setShowPromoModal] = useState(false);
@@ -115,47 +113,6 @@ const CheckoutPage = () => {
     }
   }, [selectedAddressId, addresses]);
 
-  useEffect(() => {
-    // Tạo một hàm async bên trong để gọi API
-    const generateQrCode = async () => {
-      if (paymentMethod === "QR" && finalTotal > 0) {
-        try {
-          const orderInfo = `Thanh toan don hang ${Math.random()
-            .toString(36)
-            .substring(2, 9)}`;
-
-          // Gọi đến API của chính bạn
-          const response = await fetch("/api/generate-qr", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              amount: finalTotal,
-              addInfo: orderInfo,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error("Lỗi khi tạo mã QR từ server");
-          }
-
-          const data = await response.json();
-          // Cập nhật state với dữ liệu Base64 nhận được
-          setQrCodeUrl(data.qrDataURL);
-        } catch (error) {
-          console.error("Không thể lấy mã QR:", error);
-          toast.error("Không thể tạo mã QR, vui lòng thử lại.");
-          setQrCodeUrl(""); // Xóa mã QR cũ nếu có lỗi
-        }
-      } else {
-        setQrCodeUrl(""); // Xóa mã QR khi không chọn phương thức này
-      }
-    };
-
-    generateQrCode();
-  }, [paymentMethod, finalTotal]);
-
   const handleApplyPromo = (promoToApply) => {
     if (appliedPromos.some((p) => p.id === promoToApply.id)) return;
     setAppliedPromos((prev) => [...prev, promoToApply]);
@@ -178,7 +135,6 @@ const CheckoutPage = () => {
     setShowAddressForm(false);
   };
 
-  // TÁCH LOGIC TẠO ORDER RA HÀM RIÊNG ĐỂ DÙNG LẠI
   const createOrderInFirestore = async (paymentIntentId = null) => {
     await runTransaction(db, async (transaction) => {
       for (const item of itemsToCheckout) {
@@ -252,7 +208,6 @@ const CheckoutPage = () => {
       if (paymentMethod === "STRIPE_CARD") {
         if (!stripe || !elements) throw new Error("Stripe chưa sẵn sàng.");
 
-        // 1. Gọi API backend để tạo Payment Intent
         const res = await fetch("/api/create-payment-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -261,7 +216,6 @@ const CheckoutPage = () => {
         const { clientSecret, error: backendError } = await res.json();
         if (backendError) throw new Error(backendError.message);
 
-        // 2. Xác nhận thanh toán trên client
         const cardElement = elements.getElement(CardElement);
         const paymentResult = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
@@ -271,7 +225,6 @@ const CheckoutPage = () => {
         });
         if (paymentResult.error) throw new Error(paymentResult.error.message);
 
-        // 3. Nếu thành công, tạo đơn hàng trên Firestore
         if (paymentResult.paymentIntent.status === "succeeded") {
           await createOrderInFirestore(paymentResult.paymentIntent.id);
           toast.success("Thanh toán và đặt hàng thành công!");
@@ -374,17 +327,6 @@ const CheckoutPage = () => {
                 <input
                   type="radio"
                   name="payment"
-                  value="QR"
-                  checked={paymentMethod === "QR"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
-                />
-                Chuyển khoản qua mã QR
-              </label>
-              <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
-                <input
-                  type="radio"
-                  name="payment"
                   value="STRIPE_CARD"
                   checked={paymentMethod === "STRIPE_CARD"}
                   onChange={(e) => setPaymentMethod(e.target.value)}
@@ -409,21 +351,6 @@ const CheckoutPage = () => {
                 </div>
               )}
             </div>
-            {paymentMethod === "QR" && qrCodeUrl && (
-              <div className="mt-6 p-4 border rounded-lg flex flex-col items-center animate-fade-in">
-                <h3 className="text-lg font-semibold mb-2">
-                  Quét mã VietQR để thanh toán
-                </h3>
-                <img
-                  src={qrCodeUrl}
-                  alt="Mã QR thanh toán"
-                  className="w-64 h-64"
-                />
-                <p className="font-bold text-green-600 text-xl mt-1">
-                  {formatCurrency(finalTotal)}
-                </p>
-              </div>
-            )}
           </div>
           <div className="cart-summary">
             <h2 className="cart-summary-title">Tóm tắt đơn hàng</h2>

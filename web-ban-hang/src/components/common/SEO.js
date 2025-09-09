@@ -7,13 +7,13 @@ const SEO = ({ title, description, image, url }) => {
   const siteName = "FreshFood";
   const defaultDescription =
     "FreshFood - Cung cấp thực phẩm tươi sạch, an toàn và chất lượng cao đến mọi gia đình.";
-  const defaultImage = "URL_den_logo_hoac_anh_dai_dien_cua_website_ban"; // Ví dụ: https://yourdomain.com/logo.png
+  const defaultImage = "https://quanlybanhang.vercel.app/"; // Ví dụ: https://yourdomain.com/logo.png
 
   const seo = {
     title: `${title} | ${siteName}`,
     description: description || defaultDescription,
     image: image || defaultImage,
-    url: `https://yourdomain.com${url || ""}`, // Thay 'yourdomain.com' bằng tên miền của bạn
+    url: `https://quanlybanhang.vercel.app${url || ""}`, // Thay 'yourdomain.com' bằng tên miền của bạn
   };
 
   return (
