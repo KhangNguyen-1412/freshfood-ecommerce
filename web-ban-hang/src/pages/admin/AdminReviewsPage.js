@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import {
   collection,
+  getDocs, // THÊM getDocs VÀO ĐÂY
   collectionGroup,
   query,
   orderBy,
@@ -36,7 +37,8 @@ const AdminReviewsPage = () => {
       setLoading(true);
       try {
         // Lấy tên sản phẩm để hiển thị
-        const productsSnapshot = await collection(db, "products").get();
+        // SỬA LẠI DÒNG DƯỚI ĐÂY: Dùng getDocs() thay vì .get()
+        const productsSnapshot = await getDocs(collection(db, "products"));
         const pMap = productsSnapshot.docs.reduce((map, doc) => {
           map[doc.id] = doc.data().name;
           return map;
