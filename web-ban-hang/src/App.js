@@ -29,6 +29,7 @@ import NewsletterSignupPage from "./pages/NewsletterSignupPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import StaffDashboard from "./pages/admin/StaffDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
+import AdminNewsletterPage from "./pages/admin/AdminNewsletterPage";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminCustomers from "./pages/admin/AdminCustomers";
@@ -142,6 +143,7 @@ const AppRoutes = () => {
             <Routes>
               <Route path="/" element={<AdminDashboard />} />
               <Route path="/products" element={<AdminProducts />} />
+              <Route path="/newsletter" element={<AdminNewsletterPage />} />
               <Route path="/orders" element={<AdminOrders />} />
               <Route path="/categories" element={<AdminCategories />} />
               <Route path="/customers" element={<AdminCustomers />} />

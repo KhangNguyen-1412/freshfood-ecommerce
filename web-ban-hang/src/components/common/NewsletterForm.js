@@ -11,7 +11,6 @@ const NewsletterForm = () => {
     setLoading(true);
 
     try {
-      // Gọi đến Vercel function mà chúng ta vừa tạo
       const response = await fetch("/api/subscribe-newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

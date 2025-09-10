@@ -1,7 +1,5 @@
-// src/components/layout/AdminLayout.js
-
 import React from "react";
-import { Link, useNavigate } from "react-router-dom"; // <-- Import Link và useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase/config";
 import { useAppContext } from "../../context/AppContext";
@@ -20,6 +18,7 @@ import {
   FileText,
   Building,
   Copyright,
+  Mail,
 } from "lucide-react";
 import "../../styles/layout.css";
 
@@ -67,6 +66,10 @@ const AdminLayout = ({ children }) => {
           <Link to="/admin/content" className="admin-sidebar-button">
             <FileText size={18} className="mr-2" />
             Quản lý Nội dung
+          </Link>
+          <Link to="/admin/newsletter" className="admin-sidebar-button">
+            <Mail size={18} className="mr-2" />
+            Email Marketing
           </Link>
 
           {userData.role === "admin" && (

@@ -16,7 +16,6 @@ const NewsletterSignupPage = () => {
             to="/"
             className="text-3xl font-bold text-green-700 flex items-center justify-center mb-4"
           >
-            {/* Bạn có thể dùng icon Leaf ở đây nếu muốn */}
             FreshFood
           </Link>
 
