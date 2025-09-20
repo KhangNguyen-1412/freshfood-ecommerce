@@ -24,6 +24,8 @@ import ReviewOrderPage from "./pages/ReviewOrderPage";
 import FaqPage from "./pages/FaqPage";
 import ContentPage from "./pages/ContentPage";
 import NewsletterSignupPage from "./pages/NewsletterSignupPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage"; // Giả định bạn sẽ tạo trang này
+import PaymentCancelPage from "./pages/PaymentCancelPage"; // Giả định bạn sẽ tạo trang này
 
 // Import Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -122,6 +124,8 @@ const AppRoutes = () => {
               <Route path="/newsletter" element={<NewsletterSignupPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/payment/success" element={<PaymentSuccessPage />} />
+              <Route path="/payment/cancel" element={<PaymentCancelPage />} />
               <Route
                 path="/product/:productId"
                 element={<ProductDetailPage />}

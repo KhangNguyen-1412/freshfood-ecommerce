@@ -39,6 +39,12 @@ export const AppProvider = ({ children }) => {
   const [brands, setBrands] = useState([]);
   const [brandFilter, setBrandFilter] = useState(null);
 
+  // State mới cho sản phẩm đã xem
+  const [recentlyViewed, setRecentlyViewed] = useState(() => {
+    const saved = localStorage.getItem("recentlyViewed");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Effect để lấy danh sách chi nhánh và khôi phục lựa chọn
   useEffect(() => {
     const fetchBranchesAndRestoreSelection = async () => {
@@ -276,6 +282,50 @@ export const AppProvider = ({ children }) => {
     0
   );
 
+  const reorderItems = async (items) => {
+    if (!user) {
+      toast.info("Vui lòng đăng nhập để thực hiện chức năng này.");
+      return;
+    }
+    if (!items || items.length === 0) {
+      toast.warn("Không có sản phẩm nào để thêm lại.");
+      return;
+    }
+
+    const batch = writeBatch(db);
+    let itemsAddedCount = 0;
+
+    for (const item of items) {
+      const cartItemRef = doc(db, "users", user.uid, "cart", item.id);
+      batch.set(
+        cartItemRef,
+        {
+          quantity: increment(item.quantity),
+          addedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      itemsAddedCount++;
+    }
+
+    await batch.commit();
+    toast.success(`Đã thêm ${itemsAddedCount} sản phẩm vào giỏ hàng!`);
+  };
+
+  const addRecentlyViewed = (productId) => {
+    setRecentlyViewed((prev) => {
+      // Xóa sản phẩm nếu đã tồn tại để đưa lên đầu
+      const updatedList = prev.filter((id) => id !== productId);
+      // Thêm sản phẩm mới vào đầu danh sách
+      const newList = [productId, ...updatedList];
+      // Giới hạn danh sách (ví dụ: 20 sản phẩm)
+      const limitedList = newList.slice(0, 20);
+      // Lưu vào localStorage
+      localStorage.setItem("recentlyViewed", JSON.stringify(limitedList));
+      return limitedList;
+    });
+  };
+
   if (initError) {
     return (
       <div className="flex items-center justify-center h-screen text-center p-4 bg-red-50">
@@ -317,6 +367,9 @@ export const AppProvider = ({ children }) => {
     brandFilter,
     setBrandFilter,
     removeItemsFromCart,
+    reorderItems, // Thêm hàm này vào giá trị của context
+    recentlyViewed,
+    addRecentlyViewed,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

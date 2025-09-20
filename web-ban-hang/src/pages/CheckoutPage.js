@@ -24,6 +24,9 @@ import "../styles/pages.css";
 import SEO from "../components/common/SEO";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 
+// Giả sử bạn có hàm gọi API backend để tạo URL thanh toán VNPay
+// const createVNPayPaymentAPI = async (orderInfo) => { ... };
+
 const CheckoutPage = () => {
   const { user, userData, cart, removeItemsFromCart, selectedBranch, theme } =
     useAppContext();
@@ -45,7 +48,7 @@ const CheckoutPage = () => {
     phone: "",
     address: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("COD");
   const [isProcessing, setIsProcessing] = useState(false);
   const [availablePromos, setAvailablePromos] = useState([]);
   const [appliedPromos, setAppliedPromos] = useState([]);
@@ -133,6 +136,33 @@ const CheckoutPage = () => {
     setShowAddressForm(false);
   };
 
+  // Hàm mới: Chỉ tạo đơn hàng với trạng thái chờ thanh toán
+  const createPendingOrder = async () => {
+    const newOrderRef = doc(collection(db, "orders"));
+    const orderData = {
+      userId: user.uid,
+      items: itemsToCheckout,
+      shippingInfo,
+      paymentMethod: selectedPaymentMethod,
+      status: "Chờ thanh toán", // Trạng thái mới
+      createdAt: serverTimestamp(),
+      branchId: selectedBranch.id,
+      subtotal,
+      discount: totalDiscount,
+      appliedPromos: appliedPromos.map((p) => ({
+        code: p.code,
+        discountType: p.discountType,
+        discountValue: p.discountValue,
+      })),
+      totalAmount: finalTotal,
+    };
+    await runTransaction(db, async (transaction) => {
+      // Chỉ tạo đơn hàng, không trừ kho ở bước này
+      transaction.set(newOrderRef, orderData);
+    });
+    return newOrderRef.id; // Trả về ID của đơn hàng mới
+  };
+
   const createOrderInFirestore = async (paymentIntentId = null) => {
     await runTransaction(db, async (transaction) => {
       for (const item of itemsToCheckout) {
@@ -156,9 +186,9 @@ const CheckoutPage = () => {
         userId: user.uid,
         items: itemsToCheckout,
         shippingInfo,
-        paymentMethod,
-        paymentIntentId,
-        status: paymentMethod === "COD" ? "Đang xử lý" : "Đã thanh toán",
+        paymentMethod: selectedPaymentMethod,
+        paymentIntentId, // Dành cho Stripe
+        status: "Đang xử lý", // COD mặc định là đang xử lý
         createdAt: serverTimestamp(),
         branchId: selectedBranch.id,
         subtotal,
@@ -193,6 +223,97 @@ const CheckoutPage = () => {
     setAppliedPromos([]);
   };
 
+  // --- Logic xử lý cho từng phương thức thanh toán ---
+
+  // Xử lý cho COD
+  const handleCOD = async () => {
+    await createOrderInFirestore();
+    toast.success("Đặt hàng (COD) thành công!");
+    navigate("/profile", { replace: true });
+  };
+
+  // Xử lý cho Stripe
+  const handleStripePayment = async () => {
+    if (!stripe || !elements) throw new Error("Stripe chưa sẵn sàng.");
+
+    const apiUrl = process.env.REACT_APP_API_URL;
+    if (!apiUrl) throw new Error("API URL chưa được cấu hình.");
+
+    // Đây là ví dụ, bạn nên tạo API endpoint riêng cho việc này
+    const res = await fetch(apiUrl + "/create-payment-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: Math.round(finalTotal) }), // Stripe yêu cầu số nguyên
+    });
+
+    // Kiểm tra xem response có phải là JSON hợp lệ không
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Lỗi từ server: ${res.status} - ${errorText}`);
+    }
+
+    const { clientSecret, error: backendError } = await res.json();
+    if (backendError) throw new Error(backendError.message);
+
+    const cardElement = elements.getElement(CardElement);
+    const paymentResult = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: { name: shippingInfo.name },
+      },
+    });
+
+    if (paymentResult.error) throw new Error(paymentResult.error.message);
+
+    if (paymentResult.paymentIntent.status === "succeeded") {
+      await createOrderInFirestore(paymentResult.paymentIntent.id);
+      toast.success("Thanh toán và đặt hàng thành công!");
+      navigate("/profile", { replace: true });
+    }
+  };
+
+  // Xử lý cho VNPay (đã cập nhật logic)
+  const handleVNPay = async () => {
+    // Bước 1: Tạo đơn hàng với trạng thái "Chờ thanh toán"
+    const orderId = await createPendingOrder();
+    if (!orderId) {
+      throw new Error("Không thể tạo đơn hàng.");
+    }
+
+    const apiUrl = process.env.REACT_APP_API_URL;
+    if (!apiUrl) throw new Error("API URL chưa được cấu hình.");
+
+    // Bước 2: Gọi API backend để tạo URL thanh toán
+    // Đây là ví dụ, bạn cần tạo API endpoint này ở backend
+    const res = await fetch(apiUrl + "/create_vnpay_payment_url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: orderId,
+        amount: Math.round(finalTotal),
+        orderInfo: `Thanh toan don hang #${orderId.substring(0, 8)}`,
+      }),
+    });
+
+    // Kiểm tra xem response có phải là JSON hợp lệ không
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Lỗi từ server: ${res.status} - ${errorText}`);
+    }
+
+    const { paymentUrl, error } = await res.json();
+    if (error) throw new Error(error);
+
+    // Chỉ xóa giỏ hàng khi đã có URL thanh toán và sắp chuyển hướng
+    const purchasedItemIds = itemsToCheckout.map((item) => item.id);
+    if (!location.state?.buyNowItem) {
+      await removeItemsFromCart(purchasedItemIds);
+    }
+
+    // Bước 3: Chuyển hướng người dùng đến cổng thanh toán
+    window.location.href = paymentUrl;
+  };
+
   const handlePlaceOrder = async () => {
     if (!user || !selectedAddressId || !shippingInfo.name || !selectedBranch) {
       toast.error(
@@ -203,35 +324,19 @@ const CheckoutPage = () => {
     setIsProcessing(true);
 
     try {
-      if (paymentMethod === "STRIPE_CARD") {
-        if (!stripe || !elements) throw new Error("Stripe chưa sẵn sàng.");
-
-        const res = await fetch("/api/create-payment-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: finalTotal }),
-        });
-        const { clientSecret, error: backendError } = await res.json();
-        if (backendError) throw new Error(backendError.message);
-
-        const cardElement = elements.getElement(CardElement);
-        const paymentResult = await stripe.confirmCardPayment(clientSecret, {
-          payment_method: {
-            card: cardElement,
-            billing_details: { name: shippingInfo.name },
-          },
-        });
-        if (paymentResult.error) throw new Error(paymentResult.error.message);
-
-        if (paymentResult.paymentIntent.status === "succeeded") {
-          await createOrderInFirestore(paymentResult.paymentIntent.id);
-          toast.success("Thanh toán và đặt hàng thành công!");
-          navigate("/profile", { replace: true });
-        }
-      } else {
-        await createOrderInFirestore();
-        toast.success("Đặt hàng thành công!");
-        navigate("/profile", { replace: true });
+      // Sử dụng switch-case để gọi hàm xử lý tương ứng
+      switch (selectedPaymentMethod) {
+        case "COD":
+          await handleCOD();
+          break;
+        case "STRIPE_CARD":
+          await handleStripePayment();
+          break;
+        case "VNPAY": // Ví dụ thêm VNPay
+          await handleVNPay();
+          break;
+        default:
+          throw new Error("Phương thức thanh toán không hợp lệ.");
       }
     } catch (error) {
       console.error("Lỗi khi đặt hàng:", error);
@@ -315,8 +420,8 @@ const CheckoutPage = () => {
                   type="radio"
                   name="payment"
                   value="COD"
-                  checked={paymentMethod === "COD"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  checked={selectedPaymentMethod === "COD"}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
                   className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
                 />
                 Thanh toán khi nhận hàng (COD)
@@ -326,13 +431,25 @@ const CheckoutPage = () => {
                   type="radio"
                   name="payment"
                   value="STRIPE_CARD"
-                  checked={paymentMethod === "STRIPE_CARD"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  checked={selectedPaymentMethod === "STRIPE_CARD"}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
                   className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
                 />
                 Thanh toán qua thẻ (Visa, Mastercard)
               </label>
-              {paymentMethod === "STRIPE_CARD" && (
+              {/* Ví dụ thêm phương thức VNPay */}
+              <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="VNPAY"
+                  checked={selectedPaymentMethod === "VNPAY"}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                  className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
+                />
+                Thanh toán qua VNPay
+              </label>
+              {selectedPaymentMethod === "STRIPE_CARD" && (
                 <div className="p-4 border dark:border-gray-700 rounded-md mt-2 animate-fade-in">
                   <CardElement
                     options={{

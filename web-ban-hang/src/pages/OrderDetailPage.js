@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation, Link } from "react-router-dom";
+import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { useAppContext } from "../context/AppContext";
 import { formatCurrency } from "../utils/formatCurrency";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShoppingCart } from "lucide-react";
 import Spinner from "../components/common/Spinner";
 import "../styles/pages.css";
 import SEO from "../components/common/SEO";
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
+  const { reorderItems } = useAppContext();
+  const navigate = useNavigate();
   const location = useLocation();
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!order);
@@ -27,6 +30,11 @@ const OrderDetailPage = () => {
       fetchOrder();
     }
   }, [order, orderId]);
+
+  const handleReorder = () => {
+    reorderItems(order.items);
+    navigate("/cart"); // Chuyển hướng đến giỏ hàng sau khi thêm
+  };
 
   if (loading) return <Spinner />;
 
@@ -46,7 +54,7 @@ const OrderDetailPage = () => {
       <SEO title={`Chi tiết đơn hàng #${order.id.substring(0, 8)}`} />
       <div className="page-container animate-fade-in">
         <Link
-          to="/profile"
+          to="/profile" // Đảm bảo link này trỏ về trang profile chính
           className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-6"
         >
           <ArrowLeft size={20} className="mr-2" /> Quay lại Lịch sử đơn hàng
@@ -133,6 +141,17 @@ const OrderDetailPage = () => {
               ))}
             </div>
           </div>
+          {(order.status === "Đã giao" || order.status === "Hoàn thành") && (
+            <div className="mt-8 text-center">
+              <button
+                onClick={handleReorder}
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+              >
+                <ShoppingCart className="mr-2 -ml-1 h-5 w-5" />
+                Mua lại đơn hàng này
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -11,6 +11,7 @@ import {
 import { updateProfile } from "firebase/auth";
 import { db, auth } from "../firebase/config";
 import { useAppContext } from "../context/AppContext";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import SEO from "../components/common/SEO";
 
@@ -22,11 +23,19 @@ import OrdersTab from "../components/profile/OrdersTab";
 import PointsTab from "../components/profile/PointsTab";
 import SettingsTab from "../components/profile/SettingsTab";
 import WishlistTab from "../components/profile/WishlistTab";
+import VouchersTab from "../components/profile/VouchersTab";
+import RecentlyViewedTab from "../components/profile/RecentlyViewedTab";
 import AddressesTab from "../components/profile/AddressesTab";
 
 // CSS imports
 import "../styles/pages.css";
 import "../styles/profile.css";
+
+const tabContentVariants = {
+  initial: { opacity: 0, y: 20 },
+  enter: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
+};
 
 const ProfilePage = () => {
   const { user, userData } = useAppContext();
@@ -272,29 +281,39 @@ const ProfilePage = () => {
         </div>
 
         {/* Hiển thị component con tương ứng với tab được chọn */}
-        <div>
-          {activeTab === "orders" && <OrdersTab user={user} />}
-          {activeTab === "points" && (
-            <PointsTab user={user} userData={userData} />
-          )}
-          {activeTab === "wishlist" && <WishlistTab />}
-          {activeTab === "addresses" && (
-            <AddressesTab
-              user={user}
-              onAddAddress={() => {
-                setEditingAddress(null);
-                setShowAddressForm(true);
-              }}
-              onEditAddress={(address) => {
-                setEditingAddress(address);
-                setShowAddressForm(true);
-              }}
-            />
-          )}
-          {activeTab === "settings" && (
-            <SettingsTab user={user} userData={userData} />
-          )}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            variants={tabContentVariants}
+            initial="initial"
+            animate="enter"
+            exit="exit"
+          >
+            {activeTab === "orders" && <OrdersTab user={user} />}
+            {activeTab === "points" && (
+              <PointsTab user={user} userData={userData} />
+            )}
+            {activeTab === "vouchers" && <VouchersTab />}
+            {activeTab === "recently-viewed" && <RecentlyViewedTab />}
+            {activeTab === "wishlist" && <WishlistTab />}
+            {activeTab === "addresses" && (
+              <AddressesTab
+                user={user}
+                onAddAddress={() => {
+                  setEditingAddress(null);
+                  setShowAddressForm(true);
+                }}
+                onEditAddress={(address) => {
+                  setEditingAddress(address);
+                  setShowAddressForm(true);
+                }}
+              />
+            )}
+            {activeTab === "settings" && (
+              <SettingsTab user={user} userData={userData} />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
         {/* Modal form địa chỉ */}
         {showAddressForm && (

@@ -23,7 +23,8 @@ import "../styles/pages.css";
 
 const ProductDetailPage = () => {
   const { productId } = useParams();
-  const { addToCart, user, wishlist, toggleWishlist } = useAppContext();
+  const { addToCart, user, wishlist, toggleWishlist, addRecentlyViewed } =
+    useAppContext();
   const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
@@ -41,13 +42,14 @@ const ProductDetailPage = () => {
       const productSnap = await getDoc(productRef);
       if (productSnap.exists()) {
         setProduct({ id: productSnap.id, ...productSnap.data() });
+        addRecentlyViewed(productSnap.id); // Thêm sản phẩm vào danh sách đã xem
       } else {
         setProduct(null);
       }
       setLoading(false);
     };
     fetchProduct();
-  }, [productId]);
+  }, [productId, addRecentlyViewed]);
 
   const isWishlisted = product ? wishlist.has(product.id) : false;
 

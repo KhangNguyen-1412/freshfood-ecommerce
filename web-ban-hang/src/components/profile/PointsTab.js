@@ -54,6 +54,7 @@ const PointsTab = ({ user, userData }) => {
         discountValue: voucherValue,
         expiresAt: expiryDate,
         minimumPurchaseAmount: 0,
+        userId: user.uid, // Thêm userId để dễ dàng truy vấn
         createdAt: serverTimestamp(),
       });
       await batch.commit();
@@ -111,33 +112,35 @@ const PointsTab = ({ user, userData }) => {
       </div>
       <div className="page-section">
         <h3 className="text-xl font-bold mb-4">Lịch sử điểm</h3>
-        <div className="space-y-2">
-          {pointsHistory.length > 0 ? (
-            pointsHistory.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between items-center border-b dark:border-gray-700 py-2 last:border-0"
-              >
-                <div>
-                  <p className="font-semibold">{item.reason}</p>
-                  <p className="text-xs text-gray-500">
-                    {item.createdAt?.toDate().toLocaleString("vi-VN")}
+        <div className="max-h-[40vh] overflow-y-auto pr-2">
+          <div className="space-y-2">
+            {pointsHistory.length > 0 ? (
+              pointsHistory.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between items-center border-b dark:border-gray-700 py-2 last:border-0"
+                >
+                  <div>
+                    <p className="font-semibold">{item.reason}</p>
+                    <p className="text-xs text-gray-500">
+                      {item.createdAt?.toDate().toLocaleString("vi-VN")}
+                    </p>
+                  </div>
+                  <p
+                    className={`font-bold text-lg ${
+                      item.pointsChanged > 0 ? "text-green-500" : "text-red-500"
+                    }`}
+                  >
+                    {item.pointsChanged > 0
+                      ? `+${item.pointsChanged}`
+                      : item.pointsChanged}
                   </p>
                 </div>
-                <p
-                  className={`font-bold text-lg ${
-                    item.pointsChanged > 0 ? "text-green-500" : "text-red-500"
-                  }`}
-                >
-                  {item.pointsChanged > 0
-                    ? `+${item.pointsChanged}`
-                    : item.pointsChanged}
-                </p>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">Chưa có lịch sử giao dịch điểm.</p>
-          )}
+              ))
+            ) : (
+              <p className="text-gray-500">Chưa có lịch sử giao dịch điểm.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

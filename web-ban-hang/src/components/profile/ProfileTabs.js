@@ -4,6 +4,8 @@ import "../../styles/profile.css";
 const tabs = [
   { key: "orders", label: "Lịch sử đơn hàng" },
   { key: "points", label: "Điểm Thưởng" },
+  { key: "vouchers", label: "Voucher của tôi" },
+  { key: "recently-viewed", label: "Đã xem gần đây" },
   { key: "wishlist", label: "Danh sách Yêu thích" },
   { key: "addresses", label: "Sổ địa chỉ" },
   { key: "settings", label: "Cài đặt" },
