@@ -18,6 +18,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import Spinner from "../components/common/Spinner";
 import StarRating from "../components/common/StarRating";
 import ProductCard from "../components/product/ProductCard";
+import ProductQnA from "../components/product/ProductQnA"; // Import component mới
 import { Heart, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import "../styles/pages.css";
 
@@ -32,6 +33,7 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [reviews, setReviews] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [activeInfoTab, setActiveInfoTab] = useState("reviews"); // 'reviews' or 'qna'
   const [relatedProducts, setRelatedProducts] = useState([]);
 
   useEffect(() => {
@@ -262,74 +264,95 @@ const ProductDetailPage = () => {
           </div>
         </div>
 
-        {/* --- PHẦN ĐƯỢC CẬP NHẬT ĐẦY ĐỦ --- */}
-        <div className="product-detail-reviews-panel">
-          <h2 className="text-2xl font-bold mb-4">Đánh giá sản phẩm</h2>
-          <div className="flex items-center gap-4 mb-6 pb-4 border-b dark:border-gray-700">
-            <div className="text-center">
-              <p className="text-4xl font-bold text-yellow-500">
-                {product.averageRating
-                  ? product.averageRating.toFixed(1)
-                  : "Mới"}
-              </p>
-              <StarRating
-                rating={product.averageRating || 0}
-                isEditable={false}
-              />
-              <p className="text-sm text-gray-500">
-                ({product.reviewCount || 0} đánh giá)
-              </p>
-            </div>
+        {/* --- PHẦN THÔNG TIN BỔ SUNG (ĐÁNH GIÁ & HỎI ĐÁP) --- */}
+        <div className="product-detail-info-panel mt-12">
+          {/* Tabs */}
+          <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              <button
+                onClick={() => setActiveInfoTab("reviews")}
+                className={`${
+                  activeInfoTab === "reviews"
+                    ? "border-green-500 text-green-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg`}
+              >
+                Đánh giá sản phẩm
+              </button>
+              <button
+                onClick={() => setActiveInfoTab("qna")}
+                className={`${
+                  activeInfoTab === "qna"
+                    ? "border-green-500 text-green-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg`}
+              >
+                Hỏi & Đáp
+              </button>
+            </nav>
           </div>
-          <div className="space-y-6">
-            {reviews.length > 0 ? (
-              reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="flex gap-4 border-b dark:border-gray-700 pb-4 last:border-0"
-                >
-                  <img
-                    src={
-                      review.userAvatar ||
-                      `https://i.pravatar.cc/150?u=${review.userId}`
-                    }
-                    alt="avatar"
-                    className="h-12 w-12 rounded-full object-cover"
+
+          {/* Tab Content */}
+          {activeInfoTab === "reviews" && (
+            <div className="animate-fade-in">
+              <div className="flex items-center gap-4 mb-6 pb-4 border-b dark:border-gray-700">
+                <div className="text-center">
+                  <p className="text-4xl font-bold text-yellow-500">
+                    {product.averageRating
+                      ? product.averageRating.toFixed(1)
+                      : "Mới"}
+                  </p>
+                  <StarRating
+                    rating={product.averageRating || 0}
+                    isEditable={false}
                   />
-                  <div>
-                    <p className="font-semibold">{review.userName}</p>
-                    <StarRating
-                      rating={review.rating}
-                      isEditable={false}
-                      size={18}
-                    />
-                    <p className="text-gray-600 dark:text-gray-300 mt-2">
-                      {review.comment}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      {new Date(review.createdAt?.toDate()).toLocaleString(
-                        "vi-VN"
-                      )}
-                    </p>
-                    {review.adminReply && (
-                      <div className="mt-3 ml-10 pl-4 border-l-2 border-green-500 bg-green-50 dark:bg-gray-900/50 p-3 rounded-r-lg">
-                        <p className="font-semibold text-green-700 dark:text-green-400">
-                          Phản hồi từ FreshFood:
+                  <p className="text-sm text-gray-500">
+                    ({product.reviewCount || 0} đánh giá)
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-6">
+                {reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="flex gap-4 border-b dark:border-gray-700 pb-4 last:border-0"
+                    >
+                      <img
+                        src={
+                          review.userAvatar ||
+                          `https://i.pravatar.cc/150?u=${review.userId}`
+                        }
+                        alt="avatar"
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="font-semibold">{review.userName}</p>
+                        <StarRating
+                          rating={review.rating}
+                          isEditable={false}
+                          size={18}
+                        />
+                        <p className="text-gray-600 dark:text-gray-300 mt-2">
+                          {review.comment}
                         </p>
-                        <p className="text-gray-700 dark:text-gray-200 italic">
-                          {review.adminReply}
+                        <p className="text-xs text-gray-400 mt-2">
+                          {new Date(review.createdAt?.toDate()).toLocaleString(
+                            "vi-VN"
+                          )}
                         </p>
                       </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 text-center py-4">
-                Chưa có đánh giá nào cho sản phẩm này.
-              </p>
-            )}
-          </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-4">
+                    Chưa có đánh giá nào cho sản phẩm này.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          {activeInfoTab === "qna" && <ProductQnA productId={product.id} />}
         </div>
         {relatedProducts.length > 0 && (
           <div className="mt-12">
