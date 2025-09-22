@@ -105,12 +105,17 @@ const CartPage = () => {
                     onChange={() => handleSelectItem(item.id)}
                   />
                   <img
-                    src={item.imageUrls?.[0]}
+                    src={
+                      item.imageUrl ||
+                      item.imageUrls?.[0] ||
+                      "https://placehold.co/100x100"
+                    }
                     alt={item.name}
                     className="w-20 h-20 object-cover rounded-md ml-4 mr-4"
                   />
                   <div>
                     <h3 className="font-semibold">{item.name}</h3>
+                    <p className="text-sm text-gray-500">{item.variantName}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {formatCurrency(item.price)}
                     </p>

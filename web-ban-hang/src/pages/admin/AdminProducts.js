@@ -19,7 +19,7 @@ import Spinner from "../../components/common/Spinner";
 import ProductForm from "../../components/product/ProductForm";
 import ToggleSwitch from "../../components/common/ToggleSwitch";
 import { formatCurrency } from "../../utils/formatCurrency";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import "../../styles/admin.css";
 
 const AdminProducts = () => {
@@ -35,7 +35,11 @@ const AdminProducts = () => {
   const [selectedParentFilter, setSelectedParentFilter] = useState("all");
   const [selectedChildFilter, setSelectedChildFilter] = useState("all");
   const [selectedBrandFilter, setSelectedBrandFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedProducts, setSelectedProducts] = useState(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const PRODUCTS_PER_PAGE = 10;
 
   useEffect(() => {
     setLoading(true);
@@ -199,6 +203,9 @@ const AdminProducts = () => {
           ...mainData,
           purchaseCount: 0,
           createdAt: serverTimestamp(),
+          // Nếu là sản phẩm đơn giản, không có defaultVariantId
+          defaultVariantId:
+            variants && variants.length > 0 ? mainData.defaultVariantId : null,
         });
         // Thêm các biến thể vào sub-collection
         for (const variant of variants) {
@@ -301,8 +308,21 @@ const AdminProducts = () => {
       ];
       categoryMatch = validCategoryIds.includes(product.categoryId);
     }
-    return brandMatch && categoryMatch;
+
+    const searchMatch =
+      searchTerm === "" ||
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.sku &&
+        product.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return brandMatch && categoryMatch && searchMatch;
   });
+
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
 
   if (loading) return <Spinner />;
 
@@ -326,6 +346,7 @@ const AdminProducts = () => {
           value={selectedParentFilter}
           onChange={(e) => {
             setSelectedParentFilter(e.target.value);
+            setCurrentPage(1);
             setSelectedChildFilter("all");
           }}
           className="p-2 border rounded-md text-sm dark:bg-gray-700"
@@ -339,7 +360,10 @@ const AdminProducts = () => {
         </select>
         <select
           value={selectedChildFilter}
-          onChange={(e) => setSelectedChildFilter(e.target.value)}
+          onChange={(e) => {
+            setSelectedChildFilter(e.target.value);
+            setCurrentPage(1);
+          }}
           className="p-2 border rounded-md text-sm dark:bg-gray-700"
           disabled={selectedParentFilter === "all"}
         >
@@ -352,7 +376,10 @@ const AdminProducts = () => {
         </select>
         <select
           value={selectedBrandFilter}
-          onChange={(e) => setSelectedBrandFilter(e.target.value)}
+          onChange={(e) => {
+            setSelectedBrandFilter(e.target.value);
+            setCurrentPage(1);
+          }}
           className="p-2 border rounded-md text-sm dark:bg-gray-700"
         >
           <option value="all">-- Lọc theo nhãn hiệu --</option>
@@ -362,6 +389,22 @@ const AdminProducts = () => {
             </option>
           ))}
         </select>
+        <div className="relative flex-grow">
+          <input
+            type="text"
+            placeholder="Tìm theo tên hoặc SKU..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full p-2 pl-10 border rounded-md text-sm dark:bg-gray-700"
+          />
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+        </div>
       </div>
 
       {selectedProducts.size > 0 && (
@@ -391,7 +434,7 @@ const AdminProducts = () => {
           product={editingProduct}
           onSave={handleSaveProduct}
           onCancel={() => setShowForm(false)}
-          brands={brands}
+          brands={branches}
         />
       )}
 
@@ -421,7 +464,7 @@ const AdminProducts = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((p) => (
+              {paginatedProducts.map((p) => (
                 <tr
                   key={p.id}
                   className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -501,6 +544,27 @@ const AdminProducts = () => {
           </table>
         </div>
       </div>
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center mt-6 space-x-4">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          >
+            <ChevronLeft size={16} className="mr-1" /> Trang trước
+          </button>
+          <span className="font-semibold text-gray-700 dark:text-gray-300">
+            Trang {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-green-600 text-white rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
+          >
+            Trang sau <ChevronRight size={16} className="ml-1" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -272,23 +272,39 @@ const ProductDetailPage = () => {
               )}
 
               {/* --- PHẦN HIỂN THỊ GIÁ (ĐÃ CẬP NHẬT) --- */}
-              {selectedVariant && (
-                <>
-                  {selectedVariant.onSale && selectedVariant.salePrice > 0 ? (
-                    <div className="flex items-baseline gap-3 mb-6">
-                      <p className="text-3xl font-bold text-red-500">
-                        {formatCurrency(selectedVariant.salePrice)}
-                      </p>
-                      <p className="text-2xl line-through text-gray-500">
+              {variants.length > 0 ? (
+                selectedVariant && (
+                  <>
+                    {selectedVariant.onSale && selectedVariant.salePrice > 0 ? (
+                      <div className="flex items-baseline gap-3 mb-6">
+                        <p className="text-3xl font-bold text-red-500">
+                          {formatCurrency(selectedVariant.salePrice)}
+                        </p>
+                        <p className="text-2xl line-through text-gray-500">
+                          {formatCurrency(selectedVariant.price)}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-6">
                         {formatCurrency(selectedVariant.price)}
                       </p>
-                    </div>
-                  ) : (
-                    <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-6">
-                      {formatCurrency(selectedVariant.price)}
-                    </p>
-                  )}
-                </>
+                    )}
+                  </>
+                )
+              ) : // Trường hợp sản phẩm đơn giản
+              product.onSale && product.salePrice > 0 ? (
+                <div className="flex items-baseline gap-3 mb-6">
+                  <p className="text-3xl font-bold text-red-500">
+                    {formatCurrency(product.salePrice)}
+                  </p>
+                  <p className="text-2xl line-through text-gray-500">
+                    {formatCurrency(product.price)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-6">
+                  {formatCurrency(product.price)}
+                </p>
               )}
 
               <div className="mb-6">

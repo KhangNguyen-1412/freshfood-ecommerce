@@ -7,6 +7,8 @@ import {
   orderBy,
   limit,
   getDocs,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useAppContext } from "../context/AppContext";
@@ -65,6 +67,28 @@ const HomePage = () => {
 
   const goToSlide = (index) => setCurrentSlideIndex(index);
 
+  // Hàm trợ giúp để lấy thông tin biến thể mặc định
+  const enrichProductWithDefaultVariant = async (productDoc) => {
+    const productData = { id: productDoc.id, ...productDoc.data() };
+    if (productData.defaultVariantId) {
+      const variantRef = doc(
+        db,
+        "products",
+        productDoc.id,
+        "variants",
+        productData.defaultVariantId
+      );
+      const variantSnap = await getDoc(variantRef);
+      if (variantSnap.exists()) {
+        const variantData = variantSnap.data();
+        productData.defaultVariantPrice = variantData.price;
+        productData.defaultVariantSalePrice = variantData.salePrice;
+        productData.defaultVariantOnSale = variantData.onSale;
+      }
+    }
+    return productData;
+  };
+
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -88,11 +112,13 @@ const HomePage = () => {
           limit(10)
         );
         const bestSellersSnapshot = await getDocs(bestSellersQuery);
+        const enrichedBestSellers = await Promise.all(
+          bestSellersSnapshot.docs.map(enrichProductWithDefaultVariant)
+        );
         setBestSellers(
-          bestSellersSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            categoryName: catMap[doc.data().categoryId] || "N/A",
+          enrichedBestSellers.map((p) => ({
+            ...p,
+            categoryName: catMap[p.categoryId] || "N/A",
           }))
         );
 
@@ -102,11 +128,13 @@ const HomePage = () => {
           limit(10)
         );
         const saleSnapshot = await getDocs(saleQuery);
+        const enrichedSaleProducts = await Promise.all(
+          saleSnapshot.docs.map(enrichProductWithDefaultVariant)
+        );
         setSaleProducts(
-          saleSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            categoryName: catMap[doc.data().categoryId] || "N/A",
+          enrichedSaleProducts.map((p) => ({
+            ...p,
+            categoryName: catMap[p.categoryId] || "N/A",
           }))
         );
       } catch (error) {
@@ -150,10 +178,12 @@ const HomePage = () => {
         }
         const finalQuery = query(q, ...constraints);
         const productsSnapshot = await getDocs(finalQuery);
-        let fetchedProducts = productsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          categoryName: categoriesMap[doc.data().categoryId] || "N/A",
+        let fetchedProducts = await Promise.all(
+          productsSnapshot.docs.map(enrichProductWithDefaultVariant)
+        );
+        fetchedProducts = fetchedProducts.map((p) => ({
+          ...p,
+          categoryName: categoriesMap[p.categoryId] || "N/A",
         }));
         if (searchQuery) {
           fetchedProducts = fetchedProducts.filter((p) =>

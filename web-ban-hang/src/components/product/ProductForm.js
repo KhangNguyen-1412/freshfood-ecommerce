@@ -7,7 +7,16 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, GripVertical } from "lucide-react";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const ProductForm = ({ product, onSave, onCancel, brands }) => {
   const [mainData, setMainData] = useState(
@@ -19,6 +28,9 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
       defaultVariantId: "",
       imageUrls: ["", "", ""],
     }
+  );
+  const [hasVariants, setHasVariants] = useState(
+    product ? product.defaultVariantId || product.variants?.length > 0 : true
   );
   const [variants, setVariants] = useState(
     product?.variants || [
@@ -55,6 +67,11 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
         brandId: product.brandId || "",
         defaultVariantId: product.defaultVariantId || "",
         imageUrls: product.imageUrls || ["", "", ""],
+        // Thêm các trường cho sản phẩm đơn giản
+        price: product.price || 0,
+        salePrice: product.salePrice || 0,
+        onSale: product.onSale || false,
+        stock: product.stock || 0,
       });
       // Fetch variants for the existing product
       const variantsQuery = query(
@@ -100,6 +117,7 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
               onSale: false,
               imageUrl: "",
               sku: "",
+              // Không cần stock ở đây nữa vì sẽ quản lý qua inventory
             },
           ]);
         }
@@ -140,6 +158,7 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
         onSale: false,
         imageUrl: "",
         sku: "",
+        // Không cần stock ở đây nữa
       },
     ]);
   };
@@ -173,6 +192,17 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave({ mainData, variants, variantsToDelete });
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      setVariants((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   return (
@@ -235,11 +265,6 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
               className="admin-input"
             >
               <option value="">-- Chọn Nhãn hiệu --</option>
-              {brands.map((brand) => (
-                <option key={brand.id} value={brand.id}>
-                  {brand.brandName}
-                </option>
-              ))}
             </select>
           </div>
           <div className="mt-4">
@@ -256,132 +281,116 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
           </div>
         </div>
 
-        {/* Variants Section */}
-        <div className="p-4 border rounded-md">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">
-              Các phiên bản (Chai, Lốc, Thùng...)
-            </h3>
-            <button
-              type="button"
-              onClick={addVariant}
-              className="admin-button-blue text-sm !py-1"
-            >
-              <Plus size={16} className="mr-1" /> Thêm phiên bản
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {variants.map((variant, index) => (
-              <div
-                key={variant.id}
-                className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border dark:border-gray-600 relative"
-              >
-                {variants.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeVariant(index)}
-                    className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <input
-                    name="name"
-                    value={variant.name}
-                    onChange={(e) => handleVariantChange(index, e)}
-                    placeholder="Tên phiên bản (ví dụ: Lốc 6 chai)"
-                    className="admin-input"
-                    required
-                  />
-                  <input
-                    name="price"
-                    type="number"
-                    value={variant.price}
-                    onChange={(e) => handleVariantChange(index, e)}
-                    placeholder="Giá gốc"
-                    className="admin-input"
-                    required
-                  />
-                  <input
-                    name="sku"
-                    value={variant.sku}
-                    onChange={(e) => handleVariantChange(index, e)}
-                    placeholder="Mã SKU (tùy chọn)"
-                    className="admin-input"
-                  />
-                  <input
-                    name="imageUrl"
-                    value={variant.imageUrl || ""}
-                    onChange={(e) => handleVariantChange(index, e)}
-                    placeholder="URL ảnh của phiên bản"
-                    className="admin-input md:col-span-4"
-                  />
-                </div>
-                <div className="mt-3 border-t pt-3 dark:border-gray-600">
-                  <h4 className="text-sm font-semibold mb-2">
-                    Tồn kho theo chi nhánh:
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {brands.map((branch) => (
-                      <div key={branch.id}>
-                        <label className="text-xs text-gray-500">
-                          {branch.branchName}
-                        </label>
-                        <input
-                          name={`inventory_${branch.id}`}
-                          type="number"
-                          value={variant[`inventory_${branch.id}`] || 0}
-                          onChange={(e) => handleVariantChange(index, e)}
-                          placeholder="Số lượng"
-                          className="admin-input !p-1 !text-sm"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 mt-3">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      name="onSale"
-                      checked={!!variant.onSale}
-                      onChange={(e) => handleVariantChange(index, e)}
-                    />
-                    <span>Khuyến mãi</span>
-                  </label>
-                  {variant.onSale && (
-                    <input
-                      name="salePrice"
-                      type="number"
-                      value={variant.salePrice}
-                      onChange={(e) => handleVariantChange(index, e)}
-                      placeholder="Giá khuyến mãi"
-                      className="admin-input flex-grow"
-                    />
-                  )}
-                  <label className="flex items-center gap-2 ml-auto">
-                    <input
-                      type="radio"
-                      name="defaultVariantId"
-                      checked={mainData.defaultVariantId === variant.id}
-                      onChange={() =>
-                        setMainData((prev) => ({
-                          ...prev,
-                          defaultVariantId: variant.id,
-                        }))
-                      }
-                    />
-                    <span>Đặt làm mặc định</span>
-                  </label>
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Toggle for variants */}
+        <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
+          <input
+            type="checkbox"
+            id="hasVariants"
+            checked={hasVariants}
+            onChange={(e) => setHasVariants(e.target.checked)}
+            className="h-4 w-4"
+          />
+          <label htmlFor="hasVariants" className="font-semibold">
+            Sản phẩm có nhiều phiên bản (chai, lốc, thùng...)
+          </label>
         </div>
 
-        <div className="flex justify-end gap-4">
+        {/* Simple Product Fields */}
+        {!hasVariants && (
+          <div className="p-4 border rounded-md animate-fade-in">
+            <h3 className="font-semibold mb-2">Thông tin giá & Tồn kho</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <input
+                name="price"
+                type="number"
+                value={mainData.price || 0}
+                onChange={handleMainChange}
+                placeholder="Giá gốc"
+                className="admin-input"
+                required
+              />
+              <input
+                name="stock"
+                type="number"
+                value={mainData.stock || 0}
+                onChange={handleMainChange}
+                placeholder="Tồn kho"
+                className="admin-input"
+                required
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="onSaleSimple"
+                  name="onSale"
+                  checked={mainData.onSale}
+                  onChange={handleMainChange}
+                />
+                <label htmlFor="onSaleSimple">Khuyến mãi</label>
+              </div>
+            </div>
+            {mainData.onSale && (
+              <div className="mt-4">
+                <label>Giá khuyến mãi</label>
+                <input
+                  name="salePrice"
+                  type="number"
+                  value={mainData.salePrice || 0}
+                  onChange={handleMainChange}
+                  placeholder="Giá khuyến mãi"
+                  className="admin-input"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Variants Section */}
+        {hasVariants && (
+          <div className="p-4 border rounded-md animate-fade-in">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-semibold">
+                Các phiên bản (Chai, Lốc, Thùng...)
+              </h3>
+              <button
+                type="button"
+                onClick={addVariant}
+                className="admin-button-blue text-sm !py-1"
+              >
+                <Plus size={16} className="mr-1" /> Thêm phiên bản
+              </button>
+            </div>
+
+            <DndContext
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={variants}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {variants.map((variant, index) => (
+                    <SortableVariantItem
+                      key={variant.id}
+                      id={variant.id}
+                      variant={variant}
+                      index={index}
+                      brands={brands}
+                      mainData={mainData} // This was already here, but let's double check the child component definition
+                      setMainData={setMainData}
+                      handleVariantChange={handleVariantChange}
+                      removeVariant={removeVariant}
+                      variantsLength={variants.length}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-4 pt-6 border-t dark:border-gray-700">
           <button
             type="button"
             onClick={onCancel}
@@ -394,6 +403,145 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
           </button>
         </div>
       </form>
+    </div>
+  );
+};
+
+// Component con để xử lý từng mục có thể kéo thả
+const SortableVariantItem = ({
+  id,
+  variant,
+  index,
+  brands,
+  mainData,
+  setMainData,
+  handleVariantChange,
+  removeVariant,
+  variantsLength,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border dark:border-gray-600 relative flex items-start gap-2"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="p-1 cursor-grab touch-none"
+      >
+        <GripVertical size={20} className="text-gray-400" />
+      </button>
+      <div className="flex-grow">
+        {variantsLength > 1 && (
+          <button
+            type="button"
+            onClick={() => removeVariant(index)}
+            className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <input
+            name="name"
+            value={variant.name}
+            onChange={(e) => handleVariantChange(index, e)}
+            placeholder="Tên phiên bản (ví dụ: Lốc 6 chai)"
+            className="admin-input"
+            required
+          />
+          <input
+            name="price"
+            type="number"
+            value={variant.price}
+            onChange={(e) => handleVariantChange(index, e)}
+            placeholder="Giá gốc"
+            className="admin-input"
+            required
+          />
+          <input
+            name="sku"
+            value={variant.sku}
+            onChange={(e) => handleVariantChange(index, e)}
+            placeholder="Mã SKU (tùy chọn)"
+            className="admin-input"
+          />
+          <input
+            name="imageUrl"
+            value={variant.imageUrl || ""}
+            onChange={(e) => handleVariantChange(index, e)}
+            placeholder="URL ảnh của phiên bản"
+            className="admin-input md:col-span-4"
+          />
+        </div>
+        <div className="mt-3 border-t pt-3 dark:border-gray-600">
+          <h4 className="text-sm font-semibold mb-2">
+            Tồn kho theo chi nhánh:
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {brands.map((branch) => (
+              <div key={branch.id}>
+                <label className="text-xs text-gray-500">
+                  {branch.branchName}
+                </label>
+                <input
+                  name={`inventory_${branch.id}`}
+                  type="number"
+                  value={variant[`inventory_${branch.id}`] || 0}
+                  onChange={(e) => handleVariantChange(index, e)}
+                  placeholder="Số lượng"
+                  className="admin-input !p-1 !text-sm"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-4 mt-3">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="onSale"
+              checked={!!variant.onSale}
+              onChange={(e) => handleVariantChange(index, e)}
+            />
+            <span>Khuyến mãi</span>
+          </label>
+          {variant.onSale && (
+            <input
+              name="salePrice"
+              type="number"
+              value={variant.salePrice}
+              onChange={(e) => handleVariantChange(index, e)}
+              placeholder="Giá khuyến mãi"
+              className="admin-input flex-grow"
+            />
+          )}
+          <label className="flex items-center gap-2 ml-auto">
+            <input
+              type="radio"
+              name="defaultVariantId"
+              checked={mainData.defaultVariantId === variant.id}
+              onChange={() =>
+                setMainData((prev) => ({
+                  ...prev,
+                  defaultVariantId: variant.id,
+                }))
+              }
+            />
+            <span>Đặt làm mặc định</span>
+          </label>
+        </div>
+      </div>
     </div>
   );
 };

@@ -17,13 +17,14 @@ const ProductCard = ({ product }) => {
 
   const handleBuyNow = (e) => {
     e.stopPropagation(); // Ngăn không cho sự kiện click lan ra thẻ cha (handleCardClick)
-
+    // Khi mua ngay từ card, mặc định mua biến thể đầu tiên (hoặc mặc định)
     const itemToBuy = {
       ...product,
       price:
-        product.onSale && product.salePrice > 0
+        product.defaultVariantPrice ||
+        (product.onSale && product.salePrice > 0
           ? product.salePrice
-          : product.price,
+          : product.price),
       quantity: 1,
     };
 
@@ -34,7 +35,13 @@ const ProductCard = ({ product }) => {
 
   const handleAddToCart = (e) => {
     e.stopPropagation(); // Ngăn không cho sự kiện click lan ra thẻ cha
-    addToCart(product);
+    // Khi thêm từ card, mặc định thêm biến thể đầu tiên
+    const itemToAdd = {
+      ...product,
+      // Nếu có biến thể, dùng ID biến thể mặc định, nếu không dùng ID sản phẩm
+      id: product.defaultVariantId || product.id,
+    };
+    addToCart(itemToAdd);
   };
 
   const handleWishlistClick = (e) => {
@@ -76,7 +83,25 @@ const ProductCard = ({ product }) => {
           {product.categoryName || "Chưa phân loại"}
         </p>
         <div className="flex justify-between items-center mt-4">
-          {product.onSale && product.salePrice > 0 ? (
+          {/* Logic hiển thị giá */}
+          {product.defaultVariantId ? ( // Nếu có biến thể
+            product.defaultVariantOnSale &&
+            product.defaultVariantSalePrice > 0 ? (
+              <div className="flex items-baseline gap-2">
+                <p className="product-card-price-sale">
+                  {formatCurrency(product.defaultVariantSalePrice)}
+                </p>
+                <p className="product-card-price-original">
+                  {formatCurrency(product.defaultVariantPrice)}
+                </p>
+              </div>
+            ) : (
+              <p className="product-card-price-normal">
+                {formatCurrency(product.defaultVariantPrice)}
+              </p>
+            )
+          ) : // Nếu là sản phẩm đơn giản
+          product.onSale && product.salePrice > 0 ? (
             <div className="flex items-baseline gap-2">
               <p className="product-card-price-sale">
                 {formatCurrency(product.salePrice)}
