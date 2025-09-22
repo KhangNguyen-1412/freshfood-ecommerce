@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+
 import {
   collection,
   query,
@@ -38,6 +39,7 @@ const AdminProducts = () => {
 
   useEffect(() => {
     setLoading(true);
+
     const unsubProducts = onSnapshot(
       query(collection(db, "products"), orderBy("createdAt", "desc")),
       async (snapshot) => {
@@ -45,6 +47,7 @@ const AdminProducts = () => {
           snapshot.docs.map(async (productDoc) => {
             const productData = {
               id: productDoc.id,
+
               ...productDoc.data(),
               inventory: {},
             };
@@ -75,7 +78,6 @@ const AdminProducts = () => {
           return acc;
         }, {});
         setCategories(catsMap);
-      }
     );
 
     const unsubBranches = onSnapshot(
@@ -148,6 +150,7 @@ const AdminProducts = () => {
         const productRef = doc(db, "products", editingProduct.id);
         batch.update(productRef, mainData);
 
+
         // Xóa các biến thể đã được đánh dấu
         if (variantsToDelete && variantsToDelete.length > 0) {
           variantsToDelete.forEach((variantId) => {
@@ -157,8 +160,9 @@ const AdminProducts = () => {
 
         // Cập nhật hoặc thêm mới các biến thể
         for (const variant of variants) {
-          const { id, ...variantData } = variant; // Tách id và dữ liệu chính của variant
+        const { id, ...variantData } = variant;
           const inventoryData = {};
+
           // Lọc ra các trường tồn kho
           Object.keys(variantData).forEach((key) => {
             if (key.startsWith("inventory_")) {
@@ -168,11 +172,10 @@ const AdminProducts = () => {
           });
 
           // Nếu ID bắt đầu bằng 'new_', tạo doc mới, ngược lại dùng ID cũ
-          const variantRef = variant.id.startsWith("new_")
-            ? doc(collection(productRef, "variants"))
-            : doc(productRef, "variants", variant.id);
-
-          batch.set(variantRef, variantData, { merge: true }); // Lưu dữ liệu chính
+        const variantRef = variant.id.startsWith("new_")
+          ? doc(collection(productRef, "variants"))
+          : doc(productRef, "variants", variant.id);
+        batch.set(variantRef, variantData, { merge: true }); // Lưu dữ liệu chính
           // Lưu dữ liệu tồn kho vào sub-collection của variant
           Object.entries(inventoryData).forEach(([branchId, stock]) => {
             const invRef = doc(variantRef, "inventory", branchId);
