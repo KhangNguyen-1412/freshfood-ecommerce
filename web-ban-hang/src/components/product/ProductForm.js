@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  onSnapshot,
+  orderBy,
+} from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { Plus, Trash2 } from "lucide-react";
 
