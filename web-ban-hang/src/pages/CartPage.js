@@ -63,7 +63,7 @@ const CartPage = () => {
           </h2>
           <Link
             to="/"
-            className="mt-6 bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700"
+            className="mt-8 bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700"
           >
             Tiếp tục mua sắm
           </Link>
