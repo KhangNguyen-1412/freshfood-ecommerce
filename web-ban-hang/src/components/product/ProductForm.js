@@ -31,7 +31,7 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
   const [variantsToDelete, setVariantsToDelete] = useState([]);
 
   useEffect(() => {
-    const q = query(collection(db, "categories"));
+    const q = query(collection(db, "categories"), orderBy("name"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setCategories(
         snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
