@@ -47,16 +47,27 @@ const AdminProducts = () => {
           snapshot.docs.map(async (productDoc) => {
             const productData = {
               id: productDoc.id,
-
               ...productDoc.data(),
               inventory: {},
             };
-            const inventorySnapshot = await getDocs(
-              query(collection(db, "products", productDoc.id, "inventory"))
+            // Lấy tổng tồn kho từ tất cả các biến thể
+            const variantsQuery = query(
+              collection(db, "products", productDoc.id, "variants")
             );
-            inventorySnapshot.forEach((invDoc) => {
-              productData.inventory[invDoc.id] = invDoc.data().stock;
-            });
+            const variantsSnapshot = await getDocs(variantsQuery);
+            const inventoryPromises = variantsSnapshot.docs.map(
+              async (variantDoc) => {
+                const inventorySnapshot = await getDocs(
+                  collection(variantDoc.ref, "inventory")
+                );
+                inventorySnapshot.forEach((invDoc) => {
+                  productData.inventory[invDoc.id] =
+                    (productData.inventory[invDoc.id] || 0) +
+                    invDoc.data().stock;
+                });
+              }
+            );
+            await Promise.all(inventoryPromises);
             return productData;
           })
         );

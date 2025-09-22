@@ -62,22 +62,33 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
       );
       const unsubscribeVariants = onSnapshot(variantsQuery, (snapshot) => {
         if (!snapshot.empty) {
-          const variantsData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setVariants(variantsData);
-          // Set default variant if not set or invalid
-          const currentDefault = product.defaultVariantId;
-          const defaultExists = variantsData.some(
-            (v) => v.id === currentDefault
-          );
-          if (!defaultExists && variantsData.length > 0) {
-            setMainData((prev) => ({
-              ...prev,
-              defaultVariantId: variantsData[0].id,
-            }));
-          }
+          const variantsPromises = snapshot.docs.map(async (variantDoc) => {
+            const variantData = { id: variantDoc.id, ...variantDoc.data() };
+            const inventoryQuery = query(
+              collection(variantDoc.ref, "inventory")
+            );
+            const inventorySnapshot = await getDocs(inventoryQuery);
+            inventorySnapshot.forEach((invDoc) => {
+              variantData[`inventory_${invDoc.id}`] = invDoc.data().stock;
+            });
+            return variantData;
+          });
+
+          Promise.all(variantsPromises).then((variantsData) => {
+            setVariants(variantsData);
+
+            // Set default variant if not set or invalid
+            const currentDefault = product.defaultVariantId;
+            const defaultExists = variantsData.some(
+              (v) => v.id === currentDefault
+            );
+            if (!defaultExists && variantsData.length > 0) {
+              setMainData((prev) => ({
+                ...prev,
+                defaultVariantId: variantsData[0].id,
+              }));
+            }
+          });
         } else {
           // Nếu không có variant nào, tạo một cái mặc định
           setVariants([
@@ -202,11 +213,20 @@ const ProductForm = ({ product, onSave, onCancel, brands }) => {
               required
             >
               <option value="">-- Chọn Danh mục --</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
+              {categories
+                .filter((cat) => !cat.parentId)
+                .map((parentCat) => (
+                  <optgroup key={parentCat.id} label={parentCat.name}>
+                    <option value={parentCat.id}>{parentCat.name}</option>
+                    {categories
+                      .filter((childCat) => childCat.parentId === parentCat.id)
+                      .map((childCat) => (
+                        <option key={childCat.id} value={childCat.id}>
+                          -- {childCat.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
             </select>
             <select
               name="brandId"
