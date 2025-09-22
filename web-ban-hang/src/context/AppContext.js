@@ -3,6 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import {
   doc,
   onSnapshot,
+  addDoc,
   setDoc,
   getDoc,
   serverTimestamp,
@@ -326,6 +327,21 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  // Hàm tiện ích để tạo thông báo
+  const createNotification = async (userId, notificationData) => {
+    if (!userId) return;
+    try {
+      const notificationsCol = collection(db, "users", userId, "notifications");
+      await addDoc(notificationsCol, {
+        ...notificationData,
+        isRead: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Lỗi khi tạo thông báo:", error);
+    }
+  };
+
   if (initError) {
     return (
       <div className="flex items-center justify-center h-screen text-center p-4 bg-red-50">
@@ -370,6 +386,7 @@ export const AppProvider = ({ children }) => {
     reorderItems, // Thêm hàm này vào giá trị của context
     recentlyViewed,
     addRecentlyViewed,
+    createNotification, // Thêm hàm mới vào context
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

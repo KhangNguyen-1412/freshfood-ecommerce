@@ -26,6 +26,7 @@ import WishlistTab from "../components/profile/WishlistTab";
 import VouchersTab from "../components/profile/VouchersTab";
 import RecentlyViewedTab from "../components/profile/RecentlyViewedTab";
 import AddressesTab from "../components/profile/AddressesTab";
+import MyQuestionsTab from "../components/profile/MyQuestionsTab"; // Import component mới
 
 // CSS imports
 import "../styles/pages.css";
@@ -296,6 +297,7 @@ const ProfilePage = () => {
             {activeTab === "vouchers" && <VouchersTab />}
             {activeTab === "recently-viewed" && <RecentlyViewedTab />}
             {activeTab === "wishlist" && <WishlistTab />}
+            {activeTab === "my-questions" && <MyQuestionsTab user={user} />}
             {activeTab === "addresses" && (
               <AddressesTab
                 user={user}

@@ -1,4 +1,5 @@
 import admin from "firebase-admin";
+const SibApiV3Sdk = require("@sendinblue/client");
 
 // Cấu hình Firebase Admin SDK
 try {
@@ -40,59 +41,76 @@ export default async function handler(req, res) {
   try {
     // 1. Lấy danh sách email từ Firestore
     const db = admin.firestore();
-    const subscribersSnapshot = await db.collection("subscribers").get();
+    const subscribersSnapshot = await db
+      .collection("newsletter_subscribers")
+      .get();
     if (subscribersSnapshot.empty) {
       return res.status(404).json({ message: "No subscribers found." });
     }
 
-    const recipients = subscribersSnapshot.docs.map((doc) => ({
+    const toRecipients = subscribersSnapshot.docs.map((doc) => ({
       email: doc.data().email,
     }));
 
-    // 2. Tạo một chiến dịch Email trên Brevo
-    const campaignResponse = await fetch(
-      "https://api.brevo.com/v3/emailCampaigns",
-      {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "api-key": BREVO_API_KEY,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          name: `Campaign - ${subject} - ${new Date().toISOString()}`,
-          subject: subject,
-          htmlContent: htmlContent,
-          sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
-          recipients: { listIds: [Number(process.env.BREVO_LIST_ID)] },
-        }),
-      }
-    );
+    // 2. Sử dụng Brevo SDK để gửi email giao dịch (Transactional Email)
+    let defaultClient = SibApiV3Sdk.ApiClient.instance;
+    let apiKey = defaultClient.authentications["api-key"];
+    apiKey.apiKey = BREVO_API_KEY;
 
-    if (!campaignResponse.ok) {
-      const errorData = await campaignResponse.json();
-      throw new Error(`Failed to create campaign: ${errorData.message}`);
+    let apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+    let sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+
+    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.htmlContent = htmlContent;
+    sendSmtpEmail.sender = {
+      name: BREVO_SENDER_NAME,
+      email: BREVO_SENDER_EMAIL,
+    };
+    // Gửi đến tất cả người đăng ký
+    // Brevo giới hạn 1000 người nhận mỗi API call, chúng ta sẽ chia nhỏ để an toàn
+    const batchSize = 500;
+    let totalSent = 0;
+
+    for (let i = 0; i < toRecipients.length; i += batchSize) {
+      const batchRecipients = toRecipients.slice(i, i + batchSize);
+
+      // Tạo một đối tượng email mới cho mỗi lô
+      const emailBatch = new SibApiV3Sdk.SendSmtpEmail();
+      emailBatch.subject = subject;
+      emailBatch.htmlContent = htmlContent;
+      emailBatch.sender = {
+        name: BREVO_SENDER_NAME,
+        email: BREVO_SENDER_EMAIL,
+      };
+      emailBatch.to = batchRecipients;
+
+      try {
+        console.log(
+          `Sending batch ${i / batchSize + 1} to ${
+            batchRecipients.length
+          } recipients...`
+        );
+        const data = await apiInstance.sendTransacEmail(emailBatch);
+        console.log("Brevo API response for batch: " + JSON.stringify(data));
+        totalSent += batchRecipients.length;
+      } catch (batchError) {
+        console.error(
+          `Failed to send batch starting at index ${i}:`,
+          batchError
+        );
+        // Có thể chọn dừng lại hoặc tiếp tục gửi các lô khác
+      }
     }
 
-    const campaignData = await campaignResponse.json();
-
-    // 3. Gửi chiến dịch vừa tạo
-    await fetch(
-      `https://api.brevo.com/v3/emailCampaigns/${campaignData.id}/sendNow`,
-      {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "api-key": BREVO_API_KEY,
-        },
-      }
-    );
-
-    res
-      .status(200)
-      .json({ message: `Campaign sent to ${recipients.length} subscribers.` });
+    res.status(200).json({
+      message: `Hoàn tất gửi bản tin. Đã gửi đến ${totalSent}/${toRecipients.length} người đăng ký.`,
+    });
   } catch (error) {
     console.error("Error sending email campaign:", error);
-    res.status(500).json({ message: error.message || "An error occurred." });
+    // Thêm chi tiết lỗi từ Brevo nếu có
+    const errorMessage = error.response
+      ? JSON.stringify(error.response.body)
+      : error.message;
+    res.status(500).json({ message: `An error occurred: ${errorMessage}` });
   }
 }

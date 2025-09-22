@@ -42,16 +42,19 @@ const AdminProducts = () => {
       query(collection(db, "products"), orderBy("createdAt", "desc")),
       async (snapshot) => {
         const productsWithInventory = await Promise.all(
-          snapshot.docs.map(async (doc) => {
-            const productData = { id: doc.id, ...doc.data() };
+          snapshot.docs.map(async (productDoc) => {
+            const productData = {
+              id: productDoc.id,
+              ...productDoc.data(),
+              inventory: {},
+            };
             const inventorySnapshot = await getDocs(
-              query(collection(db, "products", doc.id, "inventory"))
+              query(collection(db, "products", productDoc.id, "inventory"))
             );
-            const inventoryData = {};
             inventorySnapshot.forEach((invDoc) => {
-              inventoryData[invDoc.id] = invDoc.data().stock;
+              productData.inventory[invDoc.id] = invDoc.data().stock;
             });
-            return { ...productData, inventory: inventoryData };
+            return productData;
           })
         );
         setProducts(productsWithInventory);
@@ -138,40 +141,67 @@ const AdminProducts = () => {
   };
 
   const handleSaveProduct = async (productData) => {
-    const { inventory, ...mainProductData } = productData;
+    const { mainData, variants, variantsToDelete } = productData;
     const batch = writeBatch(db);
     try {
       if (editingProduct) {
         const productRef = doc(db, "products", editingProduct.id);
-        batch.update(productRef, mainProductData);
-        for (const branchId in inventory) {
-          const stock = inventory[branchId];
-          const inventoryRef = doc(
-            db,
-            "products",
-            editingProduct.id,
-            "inventory",
-            branchId
-          );
-          batch.set(inventoryRef, { stock: Number(stock) || 0 });
+        batch.update(productRef, mainData);
+
+        // Xóa các biến thể đã được đánh dấu
+        if (variantsToDelete && variantsToDelete.length > 0) {
+          variantsToDelete.forEach((variantId) => {
+            batch.delete(doc(productRef, "variants", variantId));
+          });
+        }
+
+        // Cập nhật hoặc thêm mới các biến thể
+        for (const variant of variants) {
+          const { id, ...variantData } = variant; // Tách id và dữ liệu chính của variant
+          const inventoryData = {};
+          // Lọc ra các trường tồn kho
+          Object.keys(variantData).forEach((key) => {
+            if (key.startsWith("inventory_")) {
+              inventoryData[key.replace("inventory_", "")] = variantData[key];
+              delete variantData[key]; // Xóa khỏi dữ liệu chính của variant
+            }
+          });
+
+          // Nếu ID bắt đầu bằng 'new_', tạo doc mới, ngược lại dùng ID cũ
+          const variantRef = variant.id.startsWith("new_")
+            ? doc(collection(productRef, "variants"))
+            : doc(productRef, "variants", variant.id);
+
+          batch.set(variantRef, variantData, { merge: true }); // Lưu dữ liệu chính
+          // Lưu dữ liệu tồn kho vào sub-collection của variant
+          Object.entries(inventoryData).forEach(([branchId, stock]) => {
+            const invRef = doc(variantRef, "inventory", branchId);
+            batch.set(invRef, { stock: Number(stock) || 0 });
+          });
         }
       } else {
         const newProductRef = doc(collection(db, "products"));
         batch.set(newProductRef, {
-          ...mainProductData,
+          ...mainData,
           purchaseCount: 0,
           createdAt: serverTimestamp(),
         });
-        for (const branchId in inventory) {
-          const stock = inventory[branchId];
-          const inventoryRef = doc(
-            db,
-            "products",
-            newProductRef.id,
-            "inventory",
-            branchId
-          );
-          batch.set(inventoryRef, { stock: Number(stock) || 0 });
+        // Thêm các biến thể vào sub-collection
+        for (const variant of variants) {
+          const { id, ...variantData } = variant;
+          const inventoryData = {};
+          Object.keys(variantData).forEach((key) => {
+            if (key.startsWith("inventory_")) {
+              inventoryData[key.replace("inventory_", "")] = variantData[key];
+              delete variantData[key];
+            }
+          });
+          const variantRef = doc(collection(newProductRef, "variants"));
+          batch.set(variantRef, variantData);
+          Object.entries(inventoryData).forEach(([branchId, stock]) => {
+            const invRef = doc(variantRef, "inventory", branchId);
+            batch.set(invRef, { stock: Number(stock) || 0 });
+          });
         }
       }
       await batch.commit();
@@ -179,8 +209,10 @@ const AdminProducts = () => {
       setShowForm(false);
       setEditingProduct(null);
     } catch (error) {
-      console.error("Lỗi khi lưu sản phẩm:", error);
-      toast.error(`Lỗi lưu sản phẩm: ${error.message}`);
+      console.error("Lỗi khi lưu sản phẩm:", error.message);
+      toast.error(
+        `Lỗi lưu sản phẩm: ${error.message}. Vui lòng kiểm tra lại dữ liệu.`
+      );
     }
   };
 
@@ -345,114 +377,115 @@ const AdminProducts = () => {
           product={editingProduct}
           onSave={handleSaveProduct}
           onCancel={() => setShowForm(false)}
-          branches={branches}
           brands={brands}
         />
       )}
 
-      <div className="admin-table-container">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b dark:border-gray-700">
-              <th className="p-2 text-left w-10">
-                <input
-                  type="checkbox"
-                  checked={
-                    filteredProducts.length > 0 &&
-                    selectedProducts.size === filteredProducts.length
-                  }
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="h-4 w-4"
-                />
-              </th>
-              <th className="p-2 text-left">Sản phẩm</th>
-              <th className="p-2 text-left">Danh mục</th>
-              <th className="p-2 text-left">Nhãn hiệu</th>
-              <th className="p-2 text-left">Giá</th>
-              <th className="p-2 text-left">Tồn kho</th>
-              <th className="p-2 text-center">Khuyến mãi</th>
-              <th className="p-2 text-left">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map((p) => (
-              <tr
-                key={p.id}
-                className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <td className="p-2">
+      <div className="admin-table-container mt-6">
+        <div className="max-h-[60vh] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800">
+              <tr className="border-b dark:border-gray-700">
+                <th className="p-2 text-left w-10">
                   <input
                     type="checkbox"
-                    checked={selectedProducts.has(p.id)}
-                    onChange={() => handleProductSelect(p.id)}
+                    checked={
+                      filteredProducts.length > 0 &&
+                      selectedProducts.size === filteredProducts.length
+                    }
+                    onChange={(e) => handleSelectAll(e.target.checked)}
                     className="h-4 w-4"
                   />
-                </td>
-                <td className="p-2 font-semibold">{p.name}</td>
-                <td className="p-2 text-gray-600 dark:text-gray-400">
-                  {categories[p.categoryId] || "N/A"}
-                </td>
-                <td className="p-2 text-gray-600 dark:text-gray-400">
-                  {brandsMap[p.brandId] || "N/A"}
-                </td>
-                <td className="p-2">
-                  {p.onSale ? (
-                    <div className="flex flex-col">
-                      <input
-                        type="number"
-                        defaultValue={p.salePrice || p.price}
-                        onBlur={(e) =>
-                          handleSalePriceChange(p.id, e.target.value)
-                        }
-                        className="p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600 w-28 font-bold text-red-500"
-                      />
-                      <span className="text-xs line-through text-gray-500">
-                        {formatCurrency(p.price)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span>{formatCurrency(p.price)}</span>
-                  )}
-                </td>
-                <td className="p-2">
-                  {branches.map((branch) => (
-                    <div
-                      key={branch.id}
-                      className="flex justify-between text-xs"
-                    >
-                      <span>{branch.branchName}:</span>
-                      <span className="font-semibold">
-                        {p.inventory?.[branch.id] || 0}
-                      </span>
-                    </div>
-                  ))}
-                </td>
-                <td className="p-2 text-center">
-                  <ToggleSwitch
-                    checked={p.onSale || false}
-                    onChange={() =>
-                      handleToggleSale(p.id, p.onSale || false, p)
-                    }
-                  />
-                </td>
-                <td className="p-2 flex space-x-2">
-                  <button
-                    onClick={() => handleEdit(p)}
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    <Edit size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </td>
+                </th>
+                <th className="p-2 text-left">Sản phẩm</th>
+                <th className="p-2 text-left">Danh mục</th>
+                <th className="p-2 text-left">Nhãn hiệu</th>
+                <th className="p-2 text-left">Giá</th>
+                <th className="p-2 text-left">Tồn kho</th>
+                <th className="p-2 text-center">Khuyến mãi</th>
+                <th className="p-2 text-left">Hành động</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredProducts.map((p) => (
+                <tr
+                  key={p.id}
+                  className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <td className="p-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.has(p.id)}
+                      onChange={() => handleProductSelect(p.id)}
+                      className="h-4 w-4"
+                    />
+                  </td>
+                  <td className="p-2 font-semibold">{p.name}</td>
+                  <td className="p-2 text-gray-600 dark:text-gray-400">
+                    {categories[p.categoryId] || "N/A"}
+                  </td>
+                  <td className="p-2 text-gray-600 dark:text-gray-400">
+                    {brandsMap[p.brandId] || "N/A"}
+                  </td>
+                  <td className="p-2">
+                    {p.onSale ? (
+                      <div className="flex flex-col">
+                        <input
+                          type="number"
+                          defaultValue={p.salePrice || p.price}
+                          onBlur={(e) =>
+                            handleSalePriceChange(p.id, e.target.value)
+                          }
+                          className="p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600 w-28 font-bold text-red-500"
+                        />
+                        <span className="text-xs line-through text-gray-500">
+                          {formatCurrency(p.price)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span>{formatCurrency(p.price)}</span>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {branches.map((branch) => (
+                      <div
+                        key={branch.id}
+                        className="flex justify-between text-xs"
+                      >
+                        <span>{branch.branchName}:</span>
+                        <span className="font-semibold">
+                          {p.inventory?.[branch.id] || 0}
+                        </span>
+                      </div>
+                    ))}
+                  </td>
+                  <td className="p-2 text-center">
+                    <ToggleSwitch
+                      checked={p.onSale || false}
+                      onChange={() =>
+                        handleToggleSale(p.id, p.onSale || false, p)
+                      }
+                    />
+                  </td>
+                  <td className="p-2 flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(p)}
+                      className="text-blue-500 hover:text-blue-700"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

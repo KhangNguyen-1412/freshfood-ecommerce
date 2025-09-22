@@ -1,5 +1,14 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  doc,
+  updateDoc,
+  writeBatch,
+} from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import {
@@ -13,10 +22,11 @@ import {
   LogOut,
   MapPin,
   ChevronDown,
+  Bell,
 } from "lucide-react";
 
 import { useAppContext } from "../../context/AppContext";
-import { auth } from "../../firebase/config";
+import { auth, db } from "../../firebase/config";
 import AuthModal from "../auth/AuthModal";
 import ForgotPasswordModal from "../auth/ForgotPasswordModal";
 import "../../styles/layout.css";
@@ -41,6 +51,8 @@ const Header = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
 
@@ -66,12 +78,73 @@ const Header = () => {
     }
   };
 
+  // Lấy thông báo cho người dùng
+  React.useEffect(() => {
+    if (user) {
+      const notifQuery = query(
+        collection(db, "users", user.uid, "notifications"),
+        orderBy("createdAt", "desc")
+      );
+      const unsubscribe = onSnapshot(notifQuery, (snapshot) => {
+        setNotifications(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      });
+      return () => unsubscribe();
+    } else {
+      setNotifications([]);
+    }
+  }, [user]);
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.isRead) {
+      const notifRef = doc(
+        db,
+        "users",
+        user.uid,
+        "notifications",
+        notification.id
+      );
+      await updateDoc(notifRef, { isRead: true });
+    }
+    navigate(notification.link || "/profile");
+    setShowNotifications(false);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (!user || unreadCount === 0) return;
+
+    const batch = writeBatch(db);
+    const unreadNotifications = notifications.filter((n) => !n.isRead);
+
+    unreadNotifications.forEach((notification) => {
+      const notifRef = doc(
+        db,
+        "users",
+        user.uid,
+        "notifications",
+        notification.id
+      );
+      batch.update(notifRef, { isRead: true });
+    });
+
+    try {
+      await batch.commit();
+      toast.info("Đã đánh dấu tất cả là đã đọc.");
+    } catch (error) {
+      console.error("Lỗi khi đánh dấu đã đọc:", error);
+      toast.error("Đã có lỗi xảy ra.");
+    }
+  };
+
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
       setSearchQuery(localSearch);
       navigate("/");
     }
   };
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <>
@@ -153,6 +226,68 @@ const Header = () => {
             >
               {theme === "light" ? <Moon size={22} /> : <Sun size={22} />}
             </button>
+
+            {user && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative header-action-button"
+                >
+                  <Bell size={24} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-700 rounded-md shadow-lg z-50 animate-fade-in max-h-96 overflow-y-auto">
+                    <div className="p-3 border-b dark:border-gray-600 flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-800 dark:text-gray-100">
+                        Thông báo
+                      </h3>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs text-blue-500 hover:underline"
+                        >
+                          Đánh dấu đã đọc
+                        </button>
+                      )}
+                    </div>
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`p-3 border-b dark:border-gray-600 last:border-0 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer ${
+                            !notification.isRead
+                              ? "bg-blue-50 dark:bg-blue-900/20"
+                              : ""
+                          }`}
+                        >
+                          <p className="font-semibold text-sm text-gray-800 dark:text-gray-200">
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {notification.createdAt
+                              ?.toDate()
+                              .toLocaleString("vi-VN")}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="p-4 text-center text-sm text-gray-500">
+                        Bạn chưa có thông báo nào.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <Link to="/cart" className="relative header-action-button">
               <ShoppingCart size={24} />

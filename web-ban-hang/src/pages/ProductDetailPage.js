@@ -35,23 +35,57 @@ const ProductDetailPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeInfoTab, setActiveInfoTab] = useState("reviews"); // 'reviews' or 'qna'
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [variants, setVariants] = useState([]);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (!productId) return;
-      setLoading(true);
-      const productRef = doc(db, "products", productId);
-      const productSnap = await getDoc(productRef);
-      if (productSnap.exists()) {
-        setProduct({ id: productSnap.id, ...productSnap.data() });
-        addRecentlyViewed(productSnap.id); // Thêm sản phẩm vào danh sách đã xem
-      } else {
-        setProduct(null);
+    const fetchProductAndVariants = async () => {
+      if (!productId) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+      setLoading(true);
+      try {
+        // Lấy dữ liệu sản phẩm chính và các biến thể song song
+        const productRef = doc(db, "products", productId);
+        const variantsQuery = query(
+          collection(db, "products", productId, "variants")
+        );
+
+        const [productSnap, variantsSnap] = await Promise.all([
+          getDoc(productRef),
+          getDocs(variantsQuery),
+        ]);
+
+        if (productSnap.exists()) {
+          const productData = { id: productSnap.id, ...productSnap.data() };
+          setProduct(productData);
+          addRecentlyViewed(productSnap.id);
+
+          const variantsData = variantsSnap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setVariants(variantsData);
+
+          if (variantsData.length > 0) {
+            const defaultVariant =
+              variantsData.find((v) => v.id === productData.defaultVariantId) ||
+              variantsData[0];
+            setSelectedVariant(defaultVariant);
+          }
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải chi tiết sản phẩm:", error);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchProduct();
-  }, [productId, addRecentlyViewed]);
+    fetchProductAndVariants();
+  }, [productId]); // Loại bỏ addRecentlyViewed khỏi mảng phụ thuộc
 
   const isWishlisted = product ? wishlist.has(product.id) : false;
 
@@ -111,16 +145,31 @@ const ProductDetailPage = () => {
   }, [product]);
 
   const handleBuyNow = () => {
-    if (!product) return;
+    if (!selectedVariant) return;
     const itemToBuy = {
       ...product,
+      ...selectedVariant,
+      // Lấy giá đúng (giá sale hoặc giá gốc)
       price:
-        product.onSale && product.salePrice > 0
-          ? product.salePrice
-          : product.price,
+        selectedVariant.onSale && selectedVariant.salePrice > 0
+          ? selectedVariant.salePrice
+          : selectedVariant.price,
       quantity: quantity,
+      productId: product.id,
+      id: selectedVariant.id, // ID của biến thể
     };
     navigate("/checkout", { state: { buyNowItem: itemToBuy } });
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedVariant) return;
+    const itemToAdd = {
+      ...product,
+      ...selectedVariant,
+      productId: product.id,
+      id: selectedVariant.id,
+    };
+    addToCart(itemToAdd, quantity);
   };
 
   if (loading) {
@@ -139,6 +188,12 @@ const ProductDetailPage = () => {
     );
   }
 
+  // Xác định ảnh để hiển thị: ưu tiên ảnh của biến thể, sau đó đến ảnh của sản phẩm
+  const displayImage =
+    selectedVariant?.imageUrl ||
+    product.imageUrls?.[currentImageIndex] ||
+    "https://placehold.co/600x400";
+
   const hasMultipleImages = product.imageUrls && product.imageUrls.length > 1;
 
   return (
@@ -154,12 +209,9 @@ const ProductDetailPage = () => {
           <div className="product-detail-grid">
             <div className="relative">
               <img
-                src={
-                  product.imageUrls?.[currentImageIndex] ||
-                  "https://placehold.co/600x400"
-                }
+                src={displayImage}
                 alt={product.name}
-                className="w-full h-auto max-h-[500px] object-cover rounded-lg shadow-md mb-4 transition-opacity duration-500"
+                className="w-full h-auto max-h-[500px] object-cover rounded-lg shadow-md mb-4 transition-all duration-300"
               />
               {hasMultipleImages && (
                 <>
@@ -196,20 +248,49 @@ const ProductDetailPage = () => {
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {product.categoryName || "Chưa phân loại"}
               </p>
-              {product.onSale && product.salePrice > 0 ? (
-                <div className="flex items-baseline gap-3 mb-6">
-                  <p className="text-3xl font-bold text-red-500">
-                    {formatCurrency(product.salePrice)}
-                  </p>
-                  <p className="text-2xl line-through text-gray-500">
-                    {formatCurrency(product.price)}
-                  </p>
+
+              {/* --- PHẦN CHỌN BIẾN THỂ --- */}
+              {variants.length > 1 && (
+                <div className="mb-6">
+                  <h3 className="font-semibold text-lg mb-2">Chọn loại:</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {variants.map((variant) => (
+                      <button
+                        key={variant.id}
+                        onClick={() => setSelectedVariant(variant)}
+                        className={`px-4 py-2 border-2 rounded-lg transition-colors ${
+                          selectedVariant?.id === variant.id
+                            ? "border-green-600 bg-green-50 dark:bg-green-900/30"
+                            : "border-gray-300 dark:border-gray-600 hover:border-green-500"
+                        }`}
+                      >
+                        {variant.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-6">
-                  {formatCurrency(product.price)}
-                </p>
               )}
+
+              {/* --- PHẦN HIỂN THỊ GIÁ (ĐÃ CẬP NHẬT) --- */}
+              {selectedVariant && (
+                <>
+                  {selectedVariant.onSale && selectedVariant.salePrice > 0 ? (
+                    <div className="flex items-baseline gap-3 mb-6">
+                      <p className="text-3xl font-bold text-red-500">
+                        {formatCurrency(selectedVariant.salePrice)}
+                      </p>
+                      <p className="text-2xl line-through text-gray-500">
+                        {formatCurrency(selectedVariant.price)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-400 mb-6">
+                      {formatCurrency(selectedVariant.price)}
+                    </p>
+                  )}
+                </>
+              )}
+
               <div className="mb-6">
                 <h3 className="font-semibold text-lg mb-2">Mô tả sản phẩm</h3>
                 <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
@@ -233,7 +314,7 @@ const ProductDetailPage = () => {
               </div>
               <div className="flex gap-4">
                 <button
-                  onClick={() => addToCart(product, quantity)}
+                  onClick={handleAddToCart}
                   className="flex-grow bg-green-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-green-700 transition-colors flex items-center justify-center"
                 >
                   <ShoppingCart size={22} className="mr-2" /> Thêm vào giỏ hàng
@@ -289,6 +370,18 @@ const ProductDetailPage = () => {
               >
                 Hỏi & Đáp
               </button>
+              {user && (
+                <button
+                  onClick={() => setActiveInfoTab("my-qna")}
+                  className={`${
+                    activeInfoTab === "my-qna"
+                      ? "border-green-500 text-green-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg`}
+                >
+                  Câu hỏi của tôi
+                </button>
+              )}
             </nav>
           </div>
 
@@ -352,7 +445,12 @@ const ProductDetailPage = () => {
               </div>
             </div>
           )}
-          {activeInfoTab === "qna" && <ProductQnA productId={product.id} />}
+          {activeInfoTab === "qna" && (
+            <ProductQnA productId={product.id} filterByUser={false} />
+          )}
+          {activeInfoTab === "my-qna" && (
+            <ProductQnA productId={product.id} filterByUser={true} />
+          )}
         </div>
         {relatedProducts.length > 0 && (
           <div className="mt-12">

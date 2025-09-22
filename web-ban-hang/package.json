@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@sendinblue/client": "^3.3.1",
     "@stripe/react-stripe-js": "^4.0.1",
     "@stripe/stripe-js": "^7.9.0",
     "@testing-library/dom": "^10.4.1",
@@ -16,6 +17,7 @@
     "express": "^5.1.0",
     "firebase": "^12.1.0",
     "firebase-admin": "^13.5.0",
+    "firebase-functions": "^6.4.0",
     "framer-motion": "^12.23.15",
     "lucide-react": "^0.539.0",
     "moment": "^2.30.1",

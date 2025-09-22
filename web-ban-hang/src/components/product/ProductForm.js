@@ -1,281 +1,374 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
-import { toast } from "react-toastify";
+import React, { useState, useEffect } from "react";
+import { collection, getDocs, query, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/config";
-import "../../styles/product.css";
+import { Plus, Trash2 } from "lucide-react";
 
-const ProductForm = ({ product, onSave, onCancel, branches, brands }) => {
-  const getInitialData = useCallback(() => {
-    const defaults = {
+const ProductForm = ({ product, onSave, onCancel, brands }) => {
+  const [mainData, setMainData] = useState(
+    product || {
       name: "",
-      price: 0,
       description: "",
       categoryId: "",
       brandId: "",
-      imageUrls: [],
-      thumbnailUrl: "",
-      inventory: {},
-    };
-    const initialProduct = { ...defaults, ...(product || {}) };
-    if (product && product.inventory) {
-      initialProduct.inventory = product.inventory;
+      defaultVariantId: "",
+      imageUrls: ["", "", ""],
     }
-    return initialProduct;
-  }, [product]);
-
-  const [formData, setFormData] = useState(getInitialData());
-  const [imageFiles, setImageFiles] = useState([]);
-  const [isUploading, setIsUploading] = useState(false);
+  );
+  const [variants, setVariants] = useState(
+    product?.variants || [
+      {
+        id: `new_variant_${Date.now()}`,
+        name: "",
+        price: 0,
+        salePrice: 0,
+        onSale: false,
+        imageUrl: "",
+        sku: "",
+      },
+    ]
+  );
   const [categories, setCategories] = useState([]);
+  const [variantsToDelete, setVariantsToDelete] = useState([]);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      const q = query(collection(db, "categories"), orderBy("name"));
-      const snapshot = await getDocs(q);
+    const q = query(collection(db, "categories"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       setCategories(
         snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
       );
-    };
-    fetchCategories();
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    setFormData(getInitialData());
-  }, [getInitialData]);
-
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "number" ? Number(value) : value,
-    }));
-  };
-
-  const handleImageChange = (e) => {
-    if (e.target.files.length > 5) {
-      toast.error("Chỉ có thể tải lên tối đa 5 ảnh.");
-      return;
-    }
-    setImageFiles(Array.from(e.target.files));
-  };
-
-  const handleInventoryChange = (branchId, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      inventory: {
-        ...prev.inventory,
-        [branchId]: value === "" ? 0 : parseInt(value, 10),
-      },
-    }));
-  };
-
-  const handleSetThumbnail = (url) => {
-    setFormData((prev) => ({ ...prev, thumbnailUrl: url }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const CLOUDINARY_CLOUD_NAME = "web_ban-hang";
-    const CLOUDINARY_UPLOAD_PRESET = "user_avatars";
-
-    setIsUploading(true);
-    let finalImageUrls = formData.imageUrls || [];
-
-    if (imageFiles.length > 0) {
-      const uploadPromises = imageFiles.map(async (file) => {
-        const data = new FormData();
-        data.append("file", file);
-        data.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-        try {
-          const res = await fetch(
-            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-            { method: "POST", body: data }
+    if (product) {
+      setMainData({
+        name: product.name || "",
+        description: product.description || "",
+        categoryId: product.categoryId || "",
+        brandId: product.brandId || "",
+        defaultVariantId: product.defaultVariantId || "",
+        imageUrls: product.imageUrls || ["", "", ""],
+      });
+      // Fetch variants for the existing product
+      const variantsQuery = query(
+        collection(db, "products", product.id, "variants")
+      );
+      const unsubscribeVariants = onSnapshot(variantsQuery, (snapshot) => {
+        if (!snapshot.empty) {
+          const variantsData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setVariants(variantsData);
+          // Set default variant if not set or invalid
+          const currentDefault = product.defaultVariantId;
+          const defaultExists = variantsData.some(
+            (v) => v.id === currentDefault
           );
-          const fileData = await res.json();
-          return fileData.secure_url;
-        } catch (error) {
-          console.error("Lỗi tải ảnh lên Cloudinary:", error);
-          return null;
+          if (!defaultExists && variantsData.length > 0) {
+            setMainData((prev) => ({
+              ...prev,
+              defaultVariantId: variantsData[0].id,
+            }));
+          }
+        } else {
+          // Nếu không có variant nào, tạo một cái mặc định
+          setVariants([
+            {
+              id: `new_variant_${Date.now()}`,
+              name: "",
+              price: 0,
+              salePrice: 0,
+              onSale: false,
+              imageUrl: "",
+              sku: "",
+            },
+          ]);
         }
       });
-      const uploadedUrls = (await Promise.all(uploadPromises)).filter(
-        (url) => url !== null
-      );
-      finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+
+      return () => unsubscribeVariants();
+    }
+  }, [product]);
+
+  const handleMainChange = (e) => {
+    const { name, value } = e.target;
+    setMainData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleVariantChange = (index, e) => {
+    const { name, value, type, checked } = e.target;
+    const newVariants = [...variants];
+    newVariants[index] = {
+      ...newVariants[index],
+      [name]:
+        type === "checkbox"
+          ? checked
+          : type === "number"
+          ? Number(value)
+          : value,
+    };
+    setVariants(newVariants);
+  };
+
+  const addVariant = () => {
+    setVariants([
+      ...variants,
+      {
+        id: `new_variant_${Date.now()}`,
+        name: "",
+        price: 0,
+        salePrice: 0,
+        onSale: false,
+        imageUrl: "",
+        sku: "",
+      },
+    ]);
+  };
+
+  const removeVariant = (index) => {
+    if (variants.length <= 1) return;
+
+    const variantToRemove = variants[index];
+    // Nếu variant này đã có trong DB (ID không bắt đầu bằng 'new_'), thêm nó vào danh sách chờ xóa
+    if (!variantToRemove.id.startsWith("new_")) {
+      setVariantsToDelete((prev) => [...prev, variantToRemove.id]);
     }
 
-    let finalFormData = { ...formData, imageUrls: finalImageUrls };
-    if (!finalFormData.thumbnailUrl && finalImageUrls.length > 0) {
-      finalFormData.thumbnailUrl = finalImageUrls[0];
+    const newVariants = variants.filter((_, i) => i !== index);
+    // Nếu variant bị xóa là default, chọn cái đầu tiên làm default mới
+    if (
+      mainData.defaultVariantId === variantToRemove.id &&
+      newVariants.length > 0
+    ) {
+      setMainData((prev) => ({ ...prev, defaultVariantId: newVariants[0].id }));
     }
+    setVariants(newVariants);
+  };
 
-    onSave(finalFormData);
+  const handleImageChange = (index, value) => {
+    const newImageUrls = [...mainData.imageUrls];
+    newImageUrls[index] = value;
+    setMainData((prev) => ({ ...prev, imageUrls: newImageUrls }));
+  };
 
-    setIsUploading(false);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({ mainData, variants, variantsToDelete });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="product-form">
-      <h2 className="text-2xl font-bold">
-        {product ? "Chỉnh sửa Sản phẩm" : "Thêm Sản phẩm mới"}
-      </h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start z-50 overflow-y-auto py-10">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-4xl space-y-6"
+      >
+        <h2 className="text-2xl font-bold">
+          {product ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
+        </h2>
 
-      <input
-        type="text"
-        name="name"
-        placeholder="Tên sản phẩm"
-        value={formData.name}
-        onChange={handleChange}
-        className="product-form-input"
-        required
-      />
-      <textarea
-        name="description"
-        placeholder="Mô tả"
-        value={formData.description}
-        onChange={handleChange}
-        className="product-form-input"
-      />
-
-      <div className="grid grid-cols-2 gap-4">
-        <input
-          type="number"
-          name="price"
-          placeholder="Giá"
-          value={formData.price}
-          onChange={handleChange}
-          className="product-form-input"
-          required
-          min="0"
-        />
-      </div>
-
-      <div className="border-t pt-4">
-        <h3 className="text-lg font-semibold mb-2">Tồn kho theo Chi nhánh</h3>
-        <div className="space-y-2">
-          {branches.map((branch) => (
-            <div
-              key={branch.id}
-              className="grid grid-cols-2 items-center gap-4"
+        {/* Main Product Info */}
+        <div className="p-4 border rounded-md">
+          <h3 className="font-semibold mb-2">Thông tin chung</h3>
+          <input
+            name="name"
+            value={mainData.name}
+            onChange={handleMainChange}
+            placeholder="Tên sản phẩm"
+            className="admin-input"
+            required
+          />
+          <textarea
+            name="description"
+            value={mainData.description}
+            onChange={handleMainChange}
+            placeholder="Mô tả"
+            className="admin-input"
+            rows="3"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <select
+              name="categoryId"
+              value={mainData.categoryId}
+              onChange={handleMainChange}
+              className="admin-input"
+              required
             >
-              <label className="text-gray-700 dark:text-gray-300">
-                {branch.branchName}
-              </label>
+              <option value="">-- Chọn Danh mục --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            <select
+              name="brandId"
+              value={mainData.brandId}
+              onChange={handleMainChange}
+              className="admin-input"
+            >
+              <option value="">-- Chọn Nhãn hiệu --</option>
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.brandName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-4">
+            <h4 className="font-semibold text-sm mb-2">URL Hình ảnh</h4>
+            {mainData.imageUrls.map((url, index) => (
               <input
-                type="number"
-                value={formData.inventory?.[branch.id] || 0}
-                onChange={(e) =>
-                  handleInventoryChange(branch.id, e.target.value)
-                }
-                className="product-form-input"
-                min="0"
+                key={index}
+                value={url || ""}
+                onChange={(e) => handleImageChange(index, e.target.value)}
+                placeholder={`URL hình ảnh ${index + 1}`}
+                className="admin-input mb-2"
               />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Nhãn hiệu (Brand)
-        </label>
-        <select
-          name="brandId"
-          value={formData.brandId}
-          onChange={handleChange}
-          className="w-full p-2 border rounded-md mt-1 dark:bg-gray-700 dark:border-gray-600"
-          required
-        >
-          <option value="">-- Chọn Nhãn hiệu --</option>
-          {brands.map((brand) => (
-            <option key={brand.id} value={brand.id}>
-              {brand.brandName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Danh mục
-        </label>
-        <select
-          name="categoryId"
-          value={formData.categoryId}
-          onChange={handleChange}
-          className="w-full p-2 border rounded-md mt-1 dark:bg-gray-700 dark:border-gray-600"
-          required
-        >
-          <option value="">-- Chọn danh mục --</option>
-          {categories
-            .filter((c) => !c.parentId)
-            .map((parent) => (
-              <optgroup key={parent.id} label={parent.name}>
-                <option value={parent.id}>{parent.name}</option>
-                {categories
-                  .filter((c) => c.parentId === parent.id)
-                  .map((child) => (
-                    <option key={child.id} value={child.id}>
-                      {child.name}
-                    </option>
-                  ))}
-              </optgroup>
             ))}
-        </select>
-      </div>
+          </div>
+        </div>
 
-      <div>
-        <label className="block mb-2 font-semibold">Hình ảnh</label>
-        <input
-          type="file"
-          onChange={handleImageChange}
-          multiple
-          accept="image/*"
-          className="w-full text-sm"
-        />
-        <div className="mt-4 flex flex-wrap gap-3">
-          {formData.imageUrls &&
-            formData.imageUrls.map((url, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={url}
-                  alt={`product-${index}`}
-                  className={`w-24 h-24 object-cover rounded-md border-2 ${
-                    formData.thumbnailUrl === url
-                      ? "border-green-500"
-                      : "border-transparent"
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSetThumbnail(url)}
-                  className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  Đặt làm thumbnail
-                </button>
+        {/* Variants Section */}
+        <div className="p-4 border rounded-md">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-semibold">
+              Các phiên bản (Chai, Lốc, Thùng...)
+            </h3>
+            <button
+              type="button"
+              onClick={addVariant}
+              className="admin-button-blue text-sm !py-1"
+            >
+              <Plus size={16} className="mr-1" /> Thêm phiên bản
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {variants.map((variant, index) => (
+              <div
+                key={variant.id}
+                className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border dark:border-gray-600 relative"
+              >
+                {variants.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(index)}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <input
+                    name="name"
+                    value={variant.name}
+                    onChange={(e) => handleVariantChange(index, e)}
+                    placeholder="Tên phiên bản (ví dụ: Lốc 6 chai)"
+                    className="admin-input"
+                    required
+                  />
+                  <input
+                    name="price"
+                    type="number"
+                    value={variant.price}
+                    onChange={(e) => handleVariantChange(index, e)}
+                    placeholder="Giá gốc"
+                    className="admin-input"
+                    required
+                  />
+                  <input
+                    name="sku"
+                    value={variant.sku}
+                    onChange={(e) => handleVariantChange(index, e)}
+                    placeholder="Mã SKU (tùy chọn)"
+                    className="admin-input"
+                  />
+                  <input
+                    name="imageUrl"
+                    value={variant.imageUrl || ""}
+                    onChange={(e) => handleVariantChange(index, e)}
+                    placeholder="URL ảnh của phiên bản"
+                    className="admin-input md:col-span-4"
+                  />
+                </div>
+                <div className="mt-3 border-t pt-3 dark:border-gray-600">
+                  <h4 className="text-sm font-semibold mb-2">
+                    Tồn kho theo chi nhánh:
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {brands.map((branch) => (
+                      <div key={branch.id}>
+                        <label className="text-xs text-gray-500">
+                          {branch.branchName}
+                        </label>
+                        <input
+                          name={`inventory_${branch.id}`}
+                          type="number"
+                          value={variant[`inventory_${branch.id}`] || 0}
+                          onChange={(e) => handleVariantChange(index, e)}
+                          placeholder="Số lượng"
+                          className="admin-input !p-1 !text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="onSale"
+                      checked={!!variant.onSale}
+                      onChange={(e) => handleVariantChange(index, e)}
+                    />
+                    <span>Khuyến mãi</span>
+                  </label>
+                  {variant.onSale && (
+                    <input
+                      name="salePrice"
+                      type="number"
+                      value={variant.salePrice}
+                      onChange={(e) => handleVariantChange(index, e)}
+                      placeholder="Giá khuyến mãi"
+                      className="admin-input flex-grow"
+                    />
+                  )}
+                  <label className="flex items-center gap-2 ml-auto">
+                    <input
+                      type="radio"
+                      name="defaultVariantId"
+                      checked={mainData.defaultVariantId === variant.id}
+                      onChange={() =>
+                        setMainData((prev) => ({
+                          ...prev,
+                          defaultVariantId: variant.id,
+                        }))
+                      }
+                    />
+                    <span>Đặt làm mặc định</span>
+                  </label>
+                </div>
               </div>
             ))}
+          </div>
         </div>
-      </div>
 
-      <div className="flex justify-end space-x-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-md"
-        >
-          Hủy
-        </button>
-        <button
-          type="submit"
-          disabled={isUploading}
-          className="px-4 py-2 bg-green-600 text-white rounded-md disabled:bg-gray-400"
-        >
-          {isUploading ? "Đang lưu..." : "Lưu sản phẩm"}
-        </button>
-      </div>
-    </form>
+        <div className="flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="admin-button-gray"
+          >
+            Hủy
+          </button>
+          <button type="submit" className="admin-button-green">
+            Lưu sản phẩm
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 

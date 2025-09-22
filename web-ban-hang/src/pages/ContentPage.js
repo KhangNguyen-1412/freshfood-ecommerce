@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import Spinner from "../components/common/Spinner";
 import "../styles/pages.css";
 import SEO from "../components/common/SEO";
 
-const ContentPage = ({ pageData }) => {
+const ContentPage = () => {
   const [content, setContent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const slug = pageData?.slug;
+  const { slug } = useParams(); // Lấy slug trực tiếp từ URL
 
   useEffect(() => {
     if (!slug) {

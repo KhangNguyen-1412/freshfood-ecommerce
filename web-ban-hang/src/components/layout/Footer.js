@@ -76,7 +76,12 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/dang-ky-nha-tin" className="footer-link">
+                <Link to="/blog" className="footer-link">
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link to="/dang-ky-nhan-tin" className="footer-link">
                   Đăng ký nhận tin
                 </Link>
               </li>

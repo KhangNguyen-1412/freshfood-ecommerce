@@ -166,9 +166,12 @@ const CheckoutPage = () => {
   const createOrderInFirestore = async (paymentIntentId = null) => {
     await runTransaction(db, async (transaction) => {
       for (const item of itemsToCheckout) {
+        // Kiểm tra tồn kho của biến thể tại chi nhánh đã chọn
         const inventoryRef = doc(
           db,
           "products",
+          item.productId,
+          "variants",
           item.id,
           "inventory",
           selectedBranch.id
@@ -181,6 +184,7 @@ const CheckoutPage = () => {
           throw new Error(`Sản phẩm "${item.name}" không đủ số lượng.`);
         }
       }
+
       const newOrderRef = doc(collection(db, "orders"));
       const orderData = {
         userId: user.uid,
@@ -202,16 +206,19 @@ const CheckoutPage = () => {
       };
       transaction.set(newOrderRef, orderData);
       for (const item of itemsToCheckout) {
-        const productRef = doc(db, "products", item.id);
         const inventoryRef = doc(
           db,
           "products",
+          item.productId,
+          "variants",
           item.id,
           "inventory",
           selectedBranch.id
         );
+        const productRef = doc(db, "products", item.productId);
         transaction.update(inventoryRef, { stock: increment(-item.quantity) });
         transaction.update(productRef, {
+          // Vẫn cập nhật purchaseCount của sản phẩm cha
           purchaseCount: increment(item.quantity),
         });
       }

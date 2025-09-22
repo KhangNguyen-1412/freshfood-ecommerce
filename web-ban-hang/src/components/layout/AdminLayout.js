@@ -1,6 +1,7 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
 import { signOut } from "firebase/auth";
+import { motion, AnimatePresence } from "framer-motion";
 import { auth } from "../../firebase/config";
 import { useAppContext } from "../../context/AppContext";
 import {
@@ -16,15 +17,29 @@ import {
   ArrowLeft,
   LogOut,
   FileText,
+  HelpCircle,
   Building,
   Copyright,
   Mail,
 } from "lucide-react";
 import "../../styles/layout.css";
 
-const AdminLayout = ({ children }) => {
+const pageVariants = {
+  initial: { opacity: 0, x: -50 },
+  in: { opacity: 1, x: 0 },
+  out: { opacity: 0, x: 50 },
+};
+
+const pageTransition = {
+  type: "tween",
+  ease: "circOut",
+  duration: 0.3,
+};
+
+const AdminLayout = () => {
   const { userData } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     try {
@@ -54,6 +69,10 @@ const AdminLayout = ({ children }) => {
           <Link to="/admin/reviews" className="admin-sidebar-button">
             <MessageSquare size={18} className="mr-2" />
             Quản lý Bình luận
+          </Link>
+          <Link to="/admin/qna" className="admin-sidebar-button">
+            <HelpCircle size={18} className="mr-2" />
+            Quản lý Hỏi & Đáp
           </Link>
           <Link to="/admin/orders" className="admin-sidebar-button">
             <ShoppingCart size={18} className="mr-2" />
@@ -112,7 +131,20 @@ const AdminLayout = ({ children }) => {
           </button>
         </div>
       </aside>
-      <main className="admin-main-content">{children}</main>
+      <main className="admin-main-content">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 };

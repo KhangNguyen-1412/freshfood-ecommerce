@@ -110,17 +110,26 @@ const AdminCategories = () => {
     categorySheet.addRows(categoryNames);
 
     const columns = [
-      { header: "name", key: "name", width: 40 },
-      { header: "categoryName", key: "categoryName", width: 30 },
-      { header: "purchasePrice", key: "purchasePrice", width: 15 },
+      { header: "product_group_id", key: "product_group_id", width: 30 },
+      { header: "product_name", key: "product_name", width: 40 },
       { header: "description", key: "description", width: 50 },
-      { header: "imageUrl1", key: "imageUrl1", width: 50 },
-      { header: "imageUrl2", key: "imageUrl2", width: 50 },
+      { header: "category_name", key: "category_name", width: 30 },
+      { header: "brand_name", key: "brand_name", width: 20 },
+      { header: "variant_name", key: "variant_name", width: 20 },
+      { header: "price", key: "price", width: 15 },
+      { header: "sale_price", key: "sale_price", width: 15 },
+      { header: "on_sale", key: "on_sale", width: 10 },
+      { header: "sku", key: "sku", width: 20 },
+      { header: "variant_image_url", key: "variant_image_url", width: 50 },
+      { header: "is_default_variant", key: "is_default_variant", width: 15 },
+      { header: "product_image_url_1", key: "product_image_url_1", width: 50 },
+      { header: "product_image_url_2", key: "product_image_url_2", width: 50 },
+      { header: "product_image_url_3", key: "product_image_url_3", width: 50 },
     ];
     branches.forEach((branch) => {
       columns.push({
-        header: `stock_${branch.id}`,
-        key: `stock_${branch.id}`,
+        header: `stock_${branch.branchName.replace(/\s+/g, "_")}`,
+        key: `stock_${branch.id}`, // Giữ key là ID để xử lý
         width: 20,
       });
     });
@@ -128,7 +137,7 @@ const AdminCategories = () => {
 
     for (let i = 2; i <= 1000; i++) {
       productSheet.getCell(`B${i}`).dataValidation = {
-        type: "list",
+        type: "list", // Sửa lại cột category
         allowBlank: false,
         formulae: [`'Danh sách Danh mục'!$A$1:$A$${categories.length}`],
         showErrorMessage: true,
@@ -142,9 +151,9 @@ const AdminCategories = () => {
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    const link = document.createElement("a");
+    const link = document.createElement("a"); // Sửa lại tên file
     link.href = URL.createObjectURL(blob);
-    link.download = "Mau_Nhap_San_Pham.xlsx";
+    link.download = "Mau_Them_San_Pham_Va_Bien_The.xlsx";
     link.click();
   };
 

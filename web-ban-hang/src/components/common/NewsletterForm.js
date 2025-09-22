@@ -1,4 +1,13 @@
 import React, { useState } from "react";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
 
 const NewsletterForm = () => {
@@ -7,57 +16,59 @@ const NewsletterForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email) {
+      toast.warn("Vui lòng nhập email của bạn.");
+      return;
+    }
     setLoading(true);
 
     try {
-      const response = await fetch("/api/subscribe-newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      // Kiểm tra xem email đã tồn tại chưa
+      const subscribersRef = collection(db, "newsletter_subscribers");
+      const q = query(subscribersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Nếu có lỗi, hiển thị thông báo lỗi từ server
-        throw new Error(result.message || "Đã có lỗi xảy ra.");
+      if (!querySnapshot.empty) {
+        toast.info("Email này đã được đăng ký trước đó!");
+        setEmail("");
+        setLoading(false);
+        return;
       }
 
-      toast.success("Cảm ơn bạn đã đăng ký nhận bản tin!");
-      setEmail(""); // Xóa email trong form sau khi thành công
+      // Thêm email mới vào Firestore
+      await addDoc(subscribersRef, {
+        email: email,
+        subscribedAt: serverTimestamp(),
+      });
+
+      toast.success("Cảm ơn bạn đã đăng ký nhận tin!");
+      setEmail("");
     } catch (error) {
-      // Hiển thị các lỗi khác
-      toast.error(error.message);
+      console.error("Lỗi khi đăng ký nhận tin:", error);
+      toast.error("Đã có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h4 className="footer-section-title">Đăng ký nhận tin</h4>
-      <p className="text-sm mb-4">
-        Nhận thông tin về sản phẩm mới và các chương trình khuyến mãi đặc biệt!
-      </p>
-      <form onSubmit={handleSubmit} className="flex">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Nhập email của bạn..."
-          className="w-full p-2 border rounded-l-md dark:bg-gray-700 dark:border-gray-600"
-          required
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-green-600 text-white px-4 rounded-r-md hover:bg-green-700 disabled:bg-gray-400"
-        >
-          {loading ? "..." : "Đăng ký"}
-        </button>
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Nhập email của bạn"
+        className="flex-grow p-3 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+        disabled={loading}
+      />
+      <button
+        type="submit"
+        className="px-6 py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:bg-gray-400"
+        disabled={loading}
+      >
+        {loading ? "Đang xử lý..." : "Đăng ký"}
+      </button>
+    </form>
   );
 };
 

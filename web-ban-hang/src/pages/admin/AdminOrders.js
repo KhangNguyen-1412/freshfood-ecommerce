@@ -13,6 +13,7 @@ import {
 import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
 import Spinner from "../../components/common/Spinner";
+import { useAppContext } from "../../context/AppContext";
 import { formatCurrency } from "../../utils/formatCurrency";
 import "../../styles/admin.css";
 
@@ -21,6 +22,7 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState("date-desc");
   const [displayedOrders, setDisplayedOrders] = useState([]);
+  const { createNotification } = useAppContext();
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -60,6 +62,14 @@ const AdminOrders = () => {
     const orderRef = doc(db, "orders", orderId);
     try {
       await updateDoc(orderRef, { status: newStatus });
+
+      // Tạo thông báo cho người dùng
+      await createNotification(orderData.userId, {
+        title: `Đơn hàng #${orderId.substring(0, 8)} đã cập nhật`,
+        message: `Trạng thái mới: ${newStatus}`,
+        link: `/profile`, // Link đến trang lịch sử đơn hàng
+      });
+
       toast.success("Cập nhật trạng thái thành công!");
 
       if (newStatus === "Hoàn thành" && orderData) {

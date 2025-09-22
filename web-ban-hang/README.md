@@ -1,70 +1,121 @@
-# Getting Started with Create React App
+# FreshFood - Hệ thống Web Bán Hàng Thực Phẩm
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Đây là dự án website thương mại điện tử hoàn chỉnh dành cho việc kinh doanh thực phẩm tươi sạch, được xây dựng bằng React và Firebase. Hệ thống bao gồm trang bán hàng cho khách hàng và một trang quản trị (admin panel) mạnh mẽ để quản lý toàn bộ hoạt động.
 
-## Available Scripts
+## Tính năng chính
 
-In the project directory, you can run:
+### A. Trang bán hàng (Customer-facing)
 
-### `npm start`
+- **Giao diện hiện đại**: Dark/Light mode, responsive design.
+- **Xác thực người dùng**: Đăng ký, đăng nhập, quên mật khẩu (sử dụng Firebase Authentication).
+- **Quản lý chi nhánh**: Cho phép khách hàng chọn chi nhánh và quận/huyện để xem sản phẩm và tồn kho tương ứng.
+- **Trang chủ động**: Hiển thị sản phẩm nổi bật, danh mục, nhãn hiệu đối tác.
+- **Chi tiết sản phẩm**:
+  - Hỗ trợ **biến thể sản phẩm** (ví dụ: chai, lốc, thùng) với giá, hình ảnh và tồn kho riêng.
+  - Thư viện ảnh, mô tả chi tiết.
+  - Hệ thống **Đánh giá & Bình luận** (sao và nhận xét).
+  - Hệ thống **Hỏi & Đáp (Q&A)** cho sản phẩm.
+- **Giỏ hàng & Thanh toán**:
+  - Giỏ hàng đồng bộ real-time với Firestore.
+  - Quy trình thanh toán (checkout) an toàn.
+  - Hỗ trợ nhiều phương thức thanh toán (COD, Stripe, VNPay).
+  - Áp dụng mã khuyến mãi.
+- **Tài khoản người dùng**:
+  - Quản lý thông tin cá nhân, địa chỉ.
+  - Lịch sử đơn hàng.
+  - Danh sách sản phẩm yêu thích (Wishlist).
+  - Lịch sử điểm tích lũy.
+  - Xem lại các câu hỏi đã đặt.
+- **Trung tâm thông báo**: Nhận thông báo real-time về đơn hàng, câu trả lời...
+- **Trang nội dung tĩnh**: Dễ dàng tạo các trang như "Chính sách", "FAQ", "Blog" từ trang quản trị.
+- **Tối ưu SEO**: Sử dụng `react-helmet-async` để tối ưu thẻ meta cho từng trang.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### B. Trang Quản trị (Admin Panel)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **Dashboard tổng quan**: Thống kê doanh thu, đơn hàng, khách hàng mới theo thời gian.
+- **Quản lý sản phẩm**:
+  - Thêm, sửa, xóa sản phẩm.
+  - Quản lý **biến thể sản phẩm** và **tồn kho theo từng chi nhánh**.
+  - Chỉnh sửa giá, bật/tắt khuyến mãi nhanh.
+  - Gán nhãn hiệu, danh mục hàng loạt.
+- **Quản lý đơn hàng**: Xem danh sách, cập nhật trạng thái đơn hàng.
+- **Quản lý nội dung**: Tạo và chỉnh sửa các trang tĩnh (chính sách, blog...).
+- **Quản lý khách hàng**: Xem danh sách, lịch sử mua hàng, phân quyền (admin, staff, customer).
+- **Quản lý tương tác**:
+  - Quản lý và phản hồi các **bình luận/đánh giá**.
+  - Quản lý và trả lời các **câu hỏi (Q&A)**.
+- **Quản lý Marketing**:
+  - Tạo và quản lý mã khuyến mãi.
+  - Gửi email marketing (bản tin) đến danh sách người đăng ký (tích hợp Brevo qua Vercel Serverless Function).
+- **Quản lý hệ thống**: Quản lý danh mục, nhãn hiệu, chi nhánh.
+- **Báo cáo & Thống kê**: Xem báo cáo doanh thu, chi phí, lợi nhuận theo tháng/năm và top sản phẩm bán chạy.
 
-### `npm test`
+## Công nghệ sử dụng
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Frontend**: React, React Router, Tailwind CSS, Framer Motion (hiệu ứng).
+- **Backend & Database**: Firebase (Firestore, Authentication, Storage).
+- **Serverless Functions**: Vercel Serverless Functions (dùng cho API gửi email).
+- **Dịch vụ bên thứ ba**:
+  - **Brevo (Sendinblue)**: Gửi email giao dịch và marketing.
+  - **Cloudinary**: Lưu trữ và quản lý ảnh (avatar, ảnh sản phẩm tải lên).
+  - **Stripe / VNPay**: Cổng thanh toán.
+- **Thư viện khác**: `react-toastify`, `exceljs`, `recharts`.
 
-### `npm run build`
+## Cài đặt và Chạy dự án
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 1. Yêu cầu
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- Node.js (v16 trở lên)
+- npm hoặc yarn
+- Firebase CLI (`npm install -g firebase-tools`)
+- Vercel CLI (`npm install -g vercel`)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 2. Cấu hình Firebase
 
-### `npm run eject`
+1.  Tạo một dự án mới trên Firebase Console.
+2.  Kích hoạt **Authentication** (với phương thức Email/Password, Google).
+3.  Kích hoạt **Firestore Database**.
+4.  Vào Project Settings > Service accounts, tạo một private key mới và tải file `serviceAccountKey.json` về, đặt vào thư mục gốc của dự án.
+5.  Trong Project Settings, tạo một Web App và sao chép cấu hình Firebase.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 3. Cấu hình biến môi trường
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Tạo một file `.env` trong thư mục `web-ban-hang` với nội dung sau:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+# Firebase (lấy từ Project Settings)
+REACT_APP_FIREBASE_API_KEY=...
+REACT_APP_FIREBASE_AUTH_DOMAIN=...
+REACT_APP_FIREBASE_PROJECT_ID=...
+REACT_APP_FIREBASE_STORAGE_BUCKET=...
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=...
+REACT_APP_FIREBASE_APP_ID=...
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+# Stripe
+REACT_APP_STRIPE_PUBLISHABLE_KEY=...
 
-## Learn More
+# Vercel Serverless Functions (dùng cho Brevo)
+REACT_APP_API_URL=http://localhost:3001 # Hoặc URL khi deploy
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 4. Cài đặt và Chạy
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+# Cài đặt các gói phụ thuộc
+npm install
 
-### Code Splitting
+# Để chạy trên môi trường phát triển (khuyến khích)
+# Lệnh này sẽ chạy cả React app và các serverless function trong /api
+vercel dev
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+# Hoặc chỉ chạy React app (các API call sẽ lỗi 404)
+npm start
+```
 
-### Analyzing the Bundle Size
+### 5. Deploy
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Dự án được tối ưu để deploy lên Vercel. Chỉ cần kết nối repository của bạn với Vercel, nó sẽ tự động nhận diện và build dự án. Đừng quên thiết lập các biến môi trường trên Vercel dashboard.
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Cảm ơn bạn đã xem qua dự án!
