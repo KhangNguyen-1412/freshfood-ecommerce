@@ -19,6 +19,7 @@ const availablePermissions = {
   qna: "Quản lý Hỏi & Đáp",
   promotions: "Quản lý Khuyến mãi",
   content: "Quản lý Nội dung",
+  combos: "Quản lý Combo",
   purchases: "Quản lý Nhập kho",
   // Các quyền chỉ dành cho admin
   customers: "Quản lý Khách hàng",

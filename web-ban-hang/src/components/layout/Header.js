@@ -20,6 +20,7 @@ import {
   User,
   Shield,
   LogOut,
+  Package,
   MapPin,
   ChevronDown,
   Bell,
@@ -153,6 +154,12 @@ const Header = () => {
           <Link to="/" className="header-brand">
             <Leaf size={32} className="mr-2" />
             FreshFood
+          </Link>
+
+          {/* Thêm link đến trang Combo */}
+          <Link to="/combos" className="header-nav-link">
+            <Package size={20} className="mr-1" />
+            Combo
           </Link>
 
           {selectedBranch && selectedDistrict && (

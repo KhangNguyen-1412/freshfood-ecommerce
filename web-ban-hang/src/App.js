@@ -51,6 +51,7 @@ import AdminReportsPage from "./pages/admin/AdminReportsPage";
 import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminBranchesPage from "./pages/admin/AdminBranchesPage";
 import AdminBrandsPage from "./pages/admin/AdminBrandsPage";
+import AdminCombosPage from "./pages/admin/AdminCombosPage";
 import AdminRolesPage from "./pages/admin/AdminRolesPage"; // Import trang mới
 import AdminQnAPage from "./pages/admin/AdminQnAPage";
 
@@ -113,6 +114,7 @@ const AppRoutes = () => {
           <Route path="content" element={<AdminContentPage />} />
           <Route path="branches" element={<AdminBranchesPage />} />
           <Route path="brands" element={<AdminBrandsPage />} />
+          <Route path="combos" element={<AdminCombosPage />} />
           <Route path="roles" element={<AdminRolesPage />} />
           <Route path="qna" element={<AdminQnAPage />} />
           <Route path="*" element={<NotFoundPage />} />
