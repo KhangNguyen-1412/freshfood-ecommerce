@@ -86,7 +86,7 @@ const Header = () => {
     toast.info("Đang phân tích hình ảnh...");
 
     // Thông tin Cloudinary (nên đưa vào biến môi trường)
-    const CLOUDINARY_CLOUD_NAME = "web_ban-hang";
+    const CLOUDINARY_CLOUD_NAME = "dzvcgfkxs";
     const CLOUDINARY_UPLOAD_PRESET = "user_avatars"; // Bạn có thể tạo một preset riêng cho image search
 
     const formData = new FormData();
