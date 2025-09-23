@@ -6,6 +6,7 @@ import {
   collection,
   getDocs,
   writeBatch,
+  increment,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import SEO from "../components/common/SEO";
