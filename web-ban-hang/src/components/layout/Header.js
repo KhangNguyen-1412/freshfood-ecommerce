@@ -78,6 +78,52 @@ const Header = () => {
     }
   }, [transcript]);
 
+  const handleImageSearch = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    toast.info("Đang phân tích hình ảnh...");
+
+    // Thông tin Cloudinary (nên đưa vào biến môi trường)
+    const CLOUDINARY_CLOUD_NAME = "web_ban-hang";
+    const CLOUDINARY_UPLOAD_PRESET = "user_avatars"; // Bạn có thể tạo một preset riêng cho image search
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    // Yêu cầu Cloudinary trả về thông tin từ add-on nhận dạng ảnh
+    formData.append("detection", "google_vision_ai");
+
+    try {
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const data = await res.json();
+
+      // Lấy các tags từ kết quả của Google Vision
+      const tags = data?.info?.detection?.google_vision_ai?.tags;
+
+      if (tags && tags.length > 0) {
+        // Lấy 3 tag đầu tiên có độ tin cậy cao nhất làm từ khóa
+        const searchKeywords = tags.slice(0, 3).join(" ");
+        setLocalSearch(searchKeywords);
+        setSearchQuery(searchKeywords); // Thực hiện tìm kiếm ngay
+        navigate("/");
+        toast.success(`Đã tìm thấy các từ khóa: "${searchKeywords}"`);
+      } else {
+        toast.warn("Không thể nhận dạng được đối tượng trong ảnh.");
+      }
+    } catch (error) {
+      toast.error("Lỗi khi phân tích hình ảnh.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
   const handleLogout = async () => {
     const userId = user?.uid;
     if (
@@ -260,6 +306,24 @@ const Header = () => {
                 size={20}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               />
+              <input
+                type="file"
+                id="image-search-input"
+                className="hidden"
+                accept="image/*"
+                onChange={handleImageSearch}
+              />
+              <label
+                htmlFor="image-search-input"
+                title="Tìm kiếm bằng hình ảnh"
+                className={`absolute right-12 top-1/2 -translate-y-1/2 p-1 rounded-full cursor-pointer transition-colors ${
+                  isUploadingImage
+                    ? "text-blue-500 animate-spin"
+                    : "text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                <Camera size={18} />
+              </label>
               <button
                 onClick={handleVoiceSearch}
                 title="Tìm kiếm bằng giọng nói"
