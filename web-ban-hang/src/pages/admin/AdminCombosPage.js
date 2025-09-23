@@ -14,7 +14,7 @@ import { toast } from "react-toastify";
 import Spinner from "../../components/common/Spinner";
 import ComboForm from "../../components/combo/ComboForm";
 import { formatCurrency } from "../../utils/formatCurrency";
-import { Edit, Trash2, PackagePlus } from "lucide-react";
+import { Edit, Trash2, PackagePlus, Search } from "lucide-react";
 
 const AdminCombosPage = () => {
   const [combos, setCombos] = useState([]);
@@ -22,6 +22,8 @@ const AdminCombosPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCombo, setEditingCombo] = useState(null);
   const [products, setProducts] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("all"); // State mới cho bộ lọc
+  const [searchTerm, setSearchTerm] = useState(""); // State mới cho tìm kiếm
 
   useEffect(() => {
     const qCombos = query(collection(db, "combos"));
@@ -93,6 +95,21 @@ const AdminCombosPage = () => {
 
   if (loading) return <Spinner />;
 
+  // Lọc combo dựa trên trạng thái đã chọn
+  const filteredCombos = combos.filter((combo) => {
+    const statusMatch =
+      statusFilter === "all" ||
+      (statusFilter === "active"
+        ? combo.isActive === true
+        : combo.isActive === false);
+
+    const searchMatch =
+      searchTerm === "" ||
+      combo.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return statusMatch && searchMatch;
+  });
+
   return (
     <div>
       <div className="admin-page-header">
@@ -117,6 +134,37 @@ const AdminCombosPage = () => {
         />
       )}
 
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6 flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label htmlFor="status-filter" className="font-semibold text-sm">
+            Trạng thái:
+          </label>
+          <select
+            id="status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="p-2 border rounded-md text-sm dark:bg-gray-700"
+          >
+            <option value="all">Tất cả</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="inactive">Tạm ẩn</option>
+          </select>
+        </div>
+        <div className="relative flex-grow">
+          <input
+            type="text"
+            placeholder="Tìm theo tên combo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 pl-10 border rounded-md text-sm dark:bg-gray-700"
+          />
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+        </div>
+      </div>
+
       <div className="admin-table-container">
         <table className="w-full">
           <thead>
@@ -129,7 +177,7 @@ const AdminCombosPage = () => {
             </tr>
           </thead>
           <tbody>
-            {combos.map((combo) => (
+            {filteredCombos.map((combo) => (
               <tr
                 key={combo.id}
                 className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"

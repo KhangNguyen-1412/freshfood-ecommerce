@@ -67,28 +67,6 @@ const HomePage = () => {
 
   const goToSlide = (index) => setCurrentSlideIndex(index);
 
-  // Hàm trợ giúp để lấy thông tin biến thể mặc định
-  const enrichProductWithDefaultVariant = async (productDoc) => {
-    const productData = { id: productDoc.id, ...productDoc.data() };
-    if (productData.defaultVariantId) {
-      const variantRef = doc(
-        db,
-        "products",
-        productDoc.id,
-        "variants",
-        productData.defaultVariantId
-      );
-      const variantSnap = await getDoc(variantRef);
-      if (variantSnap.exists()) {
-        const variantData = variantSnap.data();
-        productData.defaultVariantPrice = variantData.price;
-        productData.defaultVariantSalePrice = variantData.salePrice;
-        productData.defaultVariantOnSale = variantData.onSale;
-      }
-    }
-    return productData;
-  };
-
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -112,14 +90,13 @@ const HomePage = () => {
           limit(10)
         );
         const bestSellersSnapshot = await getDocs(bestSellersQuery);
-        const enrichedBestSellers = await Promise.all(
-          bestSellersSnapshot.docs.map(enrichProductWithDefaultVariant)
-        );
         setBestSellers(
-          enrichedBestSellers.map((p) => ({
-            ...p,
-            categoryName: catMap[p.categoryId] || "N/A",
-          }))
+          bestSellersSnapshot.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .map((p) => ({
+              ...p,
+              categoryName: catMap[p.categoryId] || "N/A",
+            }))
         );
 
         const saleQuery = query(
@@ -128,14 +105,13 @@ const HomePage = () => {
           limit(10)
         );
         const saleSnapshot = await getDocs(saleQuery);
-        const enrichedSaleProducts = await Promise.all(
-          saleSnapshot.docs.map(enrichProductWithDefaultVariant)
-        );
         setSaleProducts(
-          enrichedSaleProducts.map((p) => ({
-            ...p,
-            categoryName: catMap[p.categoryId] || "N/A",
-          }))
+          saleSnapshot.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .map((p) => ({
+              ...p,
+              categoryName: catMap[p.categoryId] || "N/A",
+            }))
         );
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu nổi bật:", error);
@@ -178,9 +154,10 @@ const HomePage = () => {
         }
         const finalQuery = query(q, ...constraints);
         const productsSnapshot = await getDocs(finalQuery);
-        let fetchedProducts = await Promise.all(
-          productsSnapshot.docs.map(enrichProductWithDefaultVariant)
-        );
+        let fetchedProducts = productsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         fetchedProducts = fetchedProducts.map((p) => ({
           ...p,
           categoryName: categoriesMap[p.categoryId] || "N/A",

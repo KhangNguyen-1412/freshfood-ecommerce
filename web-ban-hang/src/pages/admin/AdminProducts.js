@@ -177,6 +177,24 @@ const AdminProducts = () => {
   const handleSaveProduct = async (productData) => {
     const { mainData, variants, variantsToDelete } = productData;
     const batch = writeBatch(db);
+
+    // --- TỐI ƯU HÓA: Thêm dữ liệu của biến thể mặc định vào sản phẩm cha ---
+    if (variants && variants.length > 0 && mainData.defaultVariantId) {
+      const defaultVariant = variants.find(
+        (v) => v.id === mainData.defaultVariantId
+      );
+      if (defaultVariant) {
+        mainData.defaultVariantPrice = defaultVariant.price || 0;
+        mainData.defaultVariantSalePrice = defaultVariant.salePrice || 0;
+        mainData.defaultVariantOnSale = defaultVariant.onSale || false;
+        // Gán giá chính của sản phẩm bằng giá của biến thể mặc định để sắp xếp
+        mainData.price = defaultVariant.price || 0;
+        mainData.salePrice = defaultVariant.salePrice || 0;
+        mainData.onSale = defaultVariant.onSale || false;
+      }
+    }
+    // --- KẾT THÚC TỐI ƯU HÓA ---
+
     try {
       if (editingProduct) {
         const productRef = doc(db, "products", editingProduct.id);

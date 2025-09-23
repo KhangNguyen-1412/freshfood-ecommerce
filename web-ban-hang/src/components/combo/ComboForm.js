@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { collection, query, getDocs, doc } from "firebase/firestore";
+import { formatCurrency } from "../../utils/formatCurrency";
+import { db } from "../../firebase/config";
 
 const ComboForm = ({ combo, products, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -10,6 +13,8 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
     isActive: true,
     products: [],
   });
+  const [variantsCache, setVariantsCache] = useState({}); // Cache để lưu variants đã fetch
+  const [suggestedPrice, setSuggestedPrice] = useState(0);
 
   useEffect(() => {
     if (combo) {
@@ -22,8 +27,40 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
         isActive: combo.isActive !== undefined ? combo.isActive : true,
         products: combo.products || [],
       });
+      // Fetch variants cho các sản phẩm đã có trong combo khi edit
+      combo.products?.forEach(async (p) => {
+        if (p.productId && !variantsCache[p.productId]) {
+          const variantsQuery = query(
+            collection(db, "products", p.productId, "variants")
+          );
+          const variantsSnapshot = await getDocs(variantsQuery);
+          const fetchedVariants = variantsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setVariantsCache((prev) => ({
+            ...prev,
+            [p.productId]: fetchedVariants,
+          }));
+        }
+      });
     }
   }, [combo]);
+
+  // Effect để tính toán giá gợi ý
+  useEffect(() => {
+    let total = 0;
+    for (const item of formData.products) {
+      if (item.productId && item.variantId && item.quantity > 0) {
+        const variant = variantsCache[item.productId]?.find(
+          (v) => v.id === item.variantId
+        );
+        const price = variant?.onSale ? variant.salePrice : variant?.price;
+        if (price) total += price * item.quantity;
+      }
+    }
+    setSuggestedPrice(total);
+  }, [formData.products, variantsCache]);
 
   const handleMainChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -33,14 +70,40 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
     }));
   };
 
-  const handleProductChange = (index, field, value) => {
+  const handleProductChange = async (index, field, value) => {
     const newProducts = [...formData.products];
     newProducts[index][field] = value;
 
-    // Nếu thay đổi sản phẩm, reset biến thể
+    // Nếu thay đổi sản phẩm, reset biến thể và tự động chọn nếu chỉ có 1
     if (field === "productId") {
       newProducts[index].variantId = "";
+
+      // Fetch variants cho sản phẩm được chọn
+      if (value) {
+        if (!variantsCache[value]) {
+          const variantsQuery = query(
+            collection(db, "products", value, "variants")
+          );
+          const variantsSnapshot = await getDocs(variantsQuery);
+          const fetchedVariants = variantsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setVariantsCache((prev) => ({ ...prev, [value]: fetchedVariants }));
+
+          // Tự động chọn biến thể nếu sản phẩm chỉ có 1 biến thể
+          if (fetchedVariants.length === 1) {
+            newProducts[index].variantId = fetchedVariants[0].id;
+          }
+        } else {
+          // Sử dụng cache nếu có
+          if (variantsCache[value].length === 1) {
+            newProducts[index].variantId = variantsCache[value][0].id;
+          }
+        }
+      }
     }
+
     setFormData((prev) => ({ ...prev, products: newProducts }));
   };
 
@@ -104,6 +167,12 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
               className="admin-input"
               required
             />
+            <span className="text-sm text-gray-500 self-center">
+              Giá gợi ý:{" "}
+              <strong className="text-green-600">
+                {formatCurrency(suggestedPrice)}
+              </strong>
+            </span>
             <input
               name="imageUrl"
               value={formData.imageUrl}
@@ -137,9 +206,11 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
           </div>
           <div className="space-y-4">
             {formData.products.map((p, index) => {
-              const selectedProduct = products.find(
-                (prod) => prod.id === p.productId
-              );
+              const productVariants = variantsCache[p.productId] || [];
+
+              // Chỉ hiển thị ô chọn biến thể khi sản phẩm có nhiều hơn 1 biến thể
+              const showVariantSelect = productVariants.length > 1;
+
               return (
                 <div
                   key={index}
@@ -162,24 +233,33 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
                       ))}
                     </select>
                   </div>
-                  <div className="md:col-span-4">
-                    <select
-                      value={p.variantId}
-                      onChange={(e) =>
-                        handleProductChange(index, "variantId", e.target.value)
-                      }
-                      className="admin-input"
-                      disabled={!selectedProduct}
-                      required
-                    >
-                      <option value="">-- Chọn phiên bản --</option>
-                      {selectedProduct?.variants.map((variant) => (
-                        <option key={variant.id} value={variant.id}>
-                          {variant.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {showVariantSelect ? (
+                    <div className="md:col-span-4">
+                      <select
+                        value={p.variantId}
+                        onChange={(e) =>
+                          handleProductChange(
+                            index,
+                            "variantId",
+                            e.target.value
+                          )
+                        }
+                        className="admin-input"
+                        required
+                      >
+                        <option value="">-- Chọn phiên bản --</option>
+                        {productVariants.map((variant) => (
+                          <option key={variant.id} value={variant.id}>
+                            {variant.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="md:col-span-4">
+                      {/* Ẩn đi nếu không cần chọn */}
+                    </div>
+                  )}
                   <div className="md:col-span-2">
                     <input
                       type="number"
