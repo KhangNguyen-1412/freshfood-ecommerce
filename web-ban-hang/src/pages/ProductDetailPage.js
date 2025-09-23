@@ -19,7 +19,16 @@ import Spinner from "../components/common/Spinner";
 import StarRating from "../components/common/StarRating";
 import ProductCard from "../components/product/ProductCard";
 import ProductQnA from "../components/product/ProductQnA"; // Import component mới
-import { Heart, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Share2,
+  Heart,
+  ShoppingCart,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Link as LinkIcon,
+} from "lucide-react";
+import { Facebook, Twitter } from "lucide-react";
 import "../styles/pages.css";
 
 const ProductDetailPage = () => {
@@ -37,6 +46,7 @@ const ProductDetailPage = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [variants, setVariants] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
     const fetchProductAndVariants = async () => {
@@ -207,22 +217,31 @@ const ProductDetailPage = () => {
       <div className="page-container animate-fade-in">
         <div className="product-detail-main-panel">
           <div className="product-detail-grid">
-            <div className="relative">
+            <div
+              className="relative cursor-pointer"
+              onClick={() => setIsLightboxOpen(true)}
+            >
               <img
                 src={displayImage}
                 alt={product.name}
-                className="w-full h-auto max-h-[500px] object-cover rounded-lg shadow-md mb-4 transition-all duration-300"
+                className="w-full h-auto max-h-[500px] object-contain rounded-lg shadow-md mb-4 transition-all duration-300"
               />
               {hasMultipleImages && (
                 <>
                   <button
-                    onClick={goToPreviousImage}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToPreviousImage();
+                    }}
                     className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60"
                   >
                     <ChevronLeft size={24} />
                   </button>
                   <button
-                    onClick={goToNextImage}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToNextImage();
+                    }}
                     className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60"
                   >
                     <ChevronRight size={24} />
@@ -231,7 +250,10 @@ const ProductDetailPage = () => {
                     {product.imageUrls.map((_, index) => (
                       <button
                         key={index}
-                        onClick={() => setCurrentImageIndex(index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex(index);
+                        }}
                         className={`w-3 h-3 rounded-full ${
                           currentImageIndex === index
                             ? "bg-white"
@@ -313,6 +335,43 @@ const ProductDetailPage = () => {
                   {product.description || "Chưa có mô tả."}
                 </p>
               </div>
+
+              {/* --- PHẦN CHIA SẺ --- */}
+              <div className="flex items-center gap-4 mb-6 border-t dark:border-gray-600 pt-4">
+                <h3 className="font-semibold text-lg">Chia sẻ:</h3>
+                <div className="flex gap-3">
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                      window.location.href
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    <Facebook size={20} />
+                  </a>
+                  <a
+                    href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                      window.location.href
+                    )}&text=${encodeURIComponent(product.name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-full bg-sky-500 text-white hover:bg-sky-600"
+                  >
+                    <Twitter size={20} />
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      alert("Đã sao chép liên kết sản phẩm!");
+                    }}
+                    className="p-2 rounded-full bg-gray-500 text-white hover:bg-gray-600"
+                  >
+                    <LinkIcon size={20} />
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center space-x-4 mb-6">
                 <label htmlFor="quantity" className="font-semibold">
                   Số lượng:
@@ -481,6 +540,26 @@ const ProductDetailPage = () => {
           </div>
         )}
       </div>
+      {isLightboxOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] animate-fade-in"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gray-300"
+            onClick={() => setIsLightboxOpen(false)}
+          >
+            <X size={32} />
+          </button>
+          <div className="relative max-w-[90vw] max-h-[90vh]">
+            <img
+              src={displayImage}
+              alt={product.name}
+              className="w-full h-full object-contain"
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 };
