@@ -1,12 +1,20 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Heart } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Heart, ShoppingCart, GitCompareArrows } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import { formatCurrency } from "../../utils/formatCurrency";
+import StarRating from "../common/StarRating";
 import "../../styles/product.css";
 
 const ProductCard = ({ product }) => {
-  const { addToCart, user, wishlist, toggleWishlist } = useAppContext();
+  const {
+    addToCart,
+    user,
+    wishlist,
+    toggleWishlist,
+    compareList,
+    toggleCompare,
+  } = useAppContext();
   const navigate = useNavigate(); // Khởi tạo hook
 
   // Hàm xử lý khi click vào toàn bộ thẻ sản phẩm
@@ -50,6 +58,7 @@ const ProductCard = ({ product }) => {
   };
 
   const isWishlisted = wishlist.has(product.id);
+  const isComparing = compareList.some((p) => p.id === product.id);
 
   return (
     <div className="product-card group" onClick={handleCardClick}>
@@ -65,17 +74,27 @@ const ProductCard = ({ product }) => {
         />
         {user && (
           <button
-            onClick={handleWishlistClick}
-            className="product-card-wishlist-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleWishlist(product.id);
+            }}
+            title="Yêu thích"
+            className={`product-card-action-button top-2 right-2 ${
+              isWishlisted ? "text-red-500" : ""
+            }`}
           >
-            <Heart
-              size={20}
-              fill={isWishlisted ? "currentColor" : "none"}
-              className={isWishlisted ? "text-red-500" : ""}
-            />
+            <Heart size={20} fill={isWishlisted ? "currentColor" : "none"} />
           </button>
         )}
-        <div className="product-card-badge">{product.discount || "Mới"}</div>
+        <div className="product-card-badge">
+          {product.defaultVariantOnSale || product.onSale
+            ? `-${Math.round(
+                ((product.defaultVariantPrice || product.price) -
+                  (product.defaultVariantSalePrice || product.salePrice)) /
+                  (product.defaultVariantPrice || product.price)
+              )}%`
+            : "Mới"}
+        </div>
       </div>
       <div className="product-card-content">
         <h3 className="product-card-name">{product.name}</h3>
@@ -83,6 +102,30 @@ const ProductCard = ({ product }) => {
           {product.categoryName || "Chưa phân loại"}
         </p>
         <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center">
+            <StarRating
+              rating={product.averageRating || 0}
+              size={16}
+              isEditable={false}
+            />
+            <span className="text-xs text-gray-400 ml-2">
+              ({product.reviewCount || 0})
+            </span>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCompare(product);
+            }}
+            title="So sánh"
+            className={`p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ${
+              isComparing ? "text-blue-500" : ""
+            }`}
+          >
+            <GitCompareArrows size={20} />
+          </button>
+        </div>
+        <div className="mt-2">
           {/* Logic hiển thị giá */}
           {product.defaultVariantId ? ( // Nếu có biến thể
             product.defaultVariantOnSale &&
