@@ -30,7 +30,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { Facebook, Twitter } from "lucide-react";
-import "react-inner-image-zoom/lib/InnerImageZoom/styles.min.css";
+import "react-inner-image-zoom/lib/styles.min.css";
 import "../styles/pages.css";
 
 const ProductDetailPage = () => {
