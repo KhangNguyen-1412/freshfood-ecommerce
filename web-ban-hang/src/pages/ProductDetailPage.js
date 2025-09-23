@@ -18,6 +18,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import Spinner from "../components/common/Spinner";
 import StarRating from "../components/common/StarRating";
 import ProductCard from "../components/product/ProductCard";
+import ComboCard from "../pages/CombosPage"; // Tái sử dụng ComboCard
 import ProductQnA from "../components/product/ProductQnA"; // Import component mới
 import InnerImageZoom from "react-inner-image-zoom";
 import {
@@ -54,6 +55,7 @@ const ProductDetailPage = () => {
   const [activeInfoTab, setActiveInfoTab] = useState("reviews"); // 'reviews' or 'qna'
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [variants, setVariants] = useState([]);
+  const [relatedCombos, setRelatedCombos] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -170,6 +172,24 @@ const ProductDetailPage = () => {
     };
     fetchRelatedProducts();
   }, [product]);
+
+  // Lấy các combo liên quan
+  useEffect(() => {
+    if (!productId) return;
+
+    const q = query(
+      collection(db, "combos"),
+      where("productIds", "array-contains", productId),
+      where("isActive", "==", true),
+      limit(3)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setRelatedCombos(
+        snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+      );
+    });
+    return () => unsubscribe();
+  }, [productId]);
 
   const handleBuyNow = () => {
     if (!selectedVariant) return;
@@ -567,6 +587,20 @@ const ProductDetailPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* --- PHẦN COMBO LIÊN QUAN --- */}
+        {relatedCombos.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+              Gói sản phẩm & Combo liên quan
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {relatedCombos.map((c) => (
+                <ComboCard key={c.id} combo={c} />
               ))}
             </div>
           </div>

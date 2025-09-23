@@ -16,16 +16,23 @@ import "../../styles/admin.css";
 const AdminCustomers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState([]);
   const { setPage } = useAppContext();
 
   useEffect(() => {
     if (!auth.currentUser) return;
-    const q = query(
+
+    const qRoles = query(collection(db, "roles"));
+    const unsubRoles = onSnapshot(qRoles, (snapshot) => {
+      setRoles(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+
+    const qUsers = query(
       collection(db, "users"),
       where("__name__", "!=", auth.currentUser.uid)
     );
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubUsers = onSnapshot(
+      qUsers,
       (snapshot) => {
         setUsers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
         setLoading(false);
@@ -35,7 +42,10 @@ const AdminCustomers = () => {
         setLoading(false);
       }
     );
-    return () => unsubscribe();
+    return () => {
+      unsubRoles();
+      unsubUsers();
+    };
   }, []);
 
   const handleRoleChange = async (userId, newRole) => {
@@ -86,9 +96,13 @@ const AdminCustomers = () => {
                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
                     className="p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600"
                   >
-                    <option value="customer">Customer</option>
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
+                    <option value="customer">Khách hàng</option>
+                    <option value="admin">Quản trị viên</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
                   </select>
                 </td>
                 <td className="p-2">

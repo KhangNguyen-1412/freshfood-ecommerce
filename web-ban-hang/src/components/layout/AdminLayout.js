@@ -21,6 +21,7 @@ import {
   Building,
   Copyright,
   Mail,
+  Package,
 } from "lucide-react";
 import "../../styles/layout.css";
 
@@ -37,7 +38,7 @@ const pageTransition = {
 };
 
 const AdminLayout = () => {
-  const { userData } = useAppContext();
+  const { userPermissions } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -50,6 +51,10 @@ const AdminLayout = () => {
     }
   };
 
+  const canAccess = (permissionKey) => {
+    return userPermissions.isAdmin || userPermissions[permissionKey];
+  };
+
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
@@ -59,61 +64,92 @@ const AdminLayout = () => {
             <Shield size={18} className="mr-2" />
             Dashboard
           </Link>
-          <Link to="/admin/products" className="admin-sidebar-button">
-            <Leaf size={18} className="mr-2" />
-            Quản lý Sản phẩm
-          </Link>
-          <Link to="/admin/purchases" className="admin-sidebar-button">
-            <Archive size={18} className="mr-2" /> Quản lý Nhập kho
-          </Link>
-          <Link to="/admin/reviews" className="admin-sidebar-button">
-            <MessageSquare size={18} className="mr-2" />
-            Quản lý Bình luận
-          </Link>
-          <Link to="/admin/qna" className="admin-sidebar-button">
-            <HelpCircle size={18} className="mr-2" />
-            Quản lý Hỏi & Đáp
-          </Link>
-          <Link to="/admin/orders" className="admin-sidebar-button">
-            <ShoppingCart size={18} className="mr-2" />
-            Quản lý Đơn hàng
-          </Link>
-          <Link to="/admin/promotions" className="admin-sidebar-button">
-            <Tag size={18} className="mr-2" />
-            Quản lý Khuyến mãi
-          </Link>
-          <Link to="/admin/content" className="admin-sidebar-button">
-            <FileText size={18} className="mr-2" />
-            Quản lý Nội dung
-          </Link>
+          {canAccess("products") && (
+            <Link to="/admin/products" className="admin-sidebar-button">
+              <Leaf size={18} className="mr-2" />
+              Quản lý Sản phẩm
+            </Link>
+          )}
+          {canAccess("purchases") && (
+            <Link to="/admin/purchases" className="admin-sidebar-button">
+              <Archive size={18} className="mr-2" /> Quản lý Nhập kho
+            </Link>
+          )}
+          {canAccess("reviews") && (
+            <Link to="/admin/reviews" className="admin-sidebar-button">
+              <MessageSquare size={18} className="mr-2" />
+              Quản lý Bình luận
+            </Link>
+          )}
+          {canAccess("qna") && (
+            <Link to="/admin/qna" className="admin-sidebar-button">
+              <HelpCircle size={18} className="mr-2" />
+              Quản lý Hỏi & Đáp
+            </Link>
+          )}
+          {canAccess("orders") && (
+            <Link to="/admin/orders" className="admin-sidebar-button">
+              <ShoppingCart size={18} className="mr-2" />
+              Quản lý Đơn hàng
+            </Link>
+          )}
+          {canAccess("promotions") && (
+            <Link to="/admin/promotions" className="admin-sidebar-button">
+              <Tag size={18} className="mr-2" />
+              Quản lý Khuyến mãi
+            </Link>
+          )}
+          {canAccess("combos") && ( // Giả sử có quyền 'combos'
+            <Link to="/admin/combos" className="admin-sidebar-button">
+              <Package size={18} className="mr-2" />
+              Quản lý Combo
+            </Link>
+          )}
+          {canAccess("content") && (
+            <Link to="/admin/content" className="admin-sidebar-button">
+              <FileText size={18} className="mr-2" />
+              Quản lý Nội dung
+            </Link>
+          )}
           <Link to="/admin/newsletter" className="admin-sidebar-button">
             <Mail size={18} className="mr-2" />
             Email Marketing
           </Link>
 
-          {userData.role === "admin" && (
-            <>
-              <div className="pt-2 mt-2 border-t border-gray-700"></div>
-              <Link to="/admin/customers" className="admin-sidebar-button">
-                <Users size={18} className="mr-2" /> Quản lý Khách hàng
-              </Link>
-              <Link to="/admin/categories" className="admin-sidebar-button">
-                <Folder size={18} className="mr-2" />
-                Quản lý Danh mục
-              </Link>
-              <Link to="/admin/branches" className="admin-sidebar-button">
-                <Building size={18} className="mr-2" />
-                Quản lý Chi nhánh
-              </Link>
-              <Link to="/admin/brands" className="admin-sidebar-button">
-                <Copyright size={18} className="mr-2" />
-                Quản lý Nhãn hiệu
-              </Link>
-              <Link to="/admin/reports" className="admin-sidebar-button">
-                <BarChart size={18} className="mr-2" />
-                Báo cáo
-              </Link>
-            </>
+          <div className="pt-2 mt-2 border-t border-gray-700"></div>
+          {canAccess("customers") && (
+            <Link to="/admin/customers" className="admin-sidebar-button">
+              <Users size={18} className="mr-2" /> Quản lý Khách hàng
+            </Link>
+          )}
+          {canAccess("roles") && (
+            <Link to="/admin/roles" className="admin-sidebar-button">
+              <Users size={18} className="mr-2" /> Phân quyền
+            </Link>
+          )}
+          {canAccess("categories") && (
+            <Link to="/admin/categories" className="admin-sidebar-button">
+              <Folder size={18} className="mr-2" />
+              Quản lý Danh mục
+            </Link>
+          )}
+          {canAccess("branches") && (
+            <Link to="/admin/branches" className="admin-sidebar-button">
+              <Building size={18} className="mr-2" />
+              Quản lý Chi nhánh
+            </Link>
+          )}
+          {canAccess("brands") && (
+            <Link to="/admin/brands" className="admin-sidebar-button">
+              <Copyright size={18} className="mr-2" />
+              Quản lý Nhãn hiệu
+            </Link>
+          )}
+          {canAccess("reports") && (
+            <Link to="/admin/reports" className="admin-sidebar-button">
+              <BarChart size={18} className="mr-2" />
+              Báo cáo
+            </Link>
           )}
         </nav>
         <div className="flex flex-col space-y-2 pt-4 border-t border-gray-700">

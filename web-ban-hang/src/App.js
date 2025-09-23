@@ -30,6 +30,8 @@ import NewsletterSignupPage from "./pages/NewsletterSignupPage";
 import BlogListPage from "./pages/BlogListPage"; // Import trang Blog
 import PaymentSuccessPage from "./pages/PaymentSuccessPage"; // Giả định bạn sẽ tạo trang này
 import ComparePage from "./pages/ComparePage"; // Import trang so sánh
+import CombosPage from "./pages/CombosPage"; // Import trang combo
+import ComboDetailPage from "./pages/ComboDetailPage"; // Import trang chi tiết combo
 import PaymentCancelPage from "./pages/PaymentCancelPage"; // Giả định bạn sẽ tạo trang này
 import NotFoundPage from "./pages/NotFoundPage"; // Import trang 404
 
@@ -49,6 +51,7 @@ import AdminReportsPage from "./pages/admin/AdminReportsPage";
 import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminBranchesPage from "./pages/admin/AdminBranchesPage";
 import AdminBrandsPage from "./pages/admin/AdminBrandsPage";
+import AdminRolesPage from "./pages/admin/AdminRolesPage"; // Import trang mới
 import AdminQnAPage from "./pages/admin/AdminQnAPage";
 
 // --- Main Routing Component ---
@@ -74,6 +77,8 @@ const AppRoutes = () => {
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="payment/success" element={<PaymentSuccessPage />} />
+        <Route path="combos" element={<CombosPage />} />
+        <Route path="combo/:comboId" element={<ComboDetailPage />} />
         <Route path="compare" element={<ComparePage />} />
         <Route path="payment/cancel" element={<PaymentCancelPage />} />
         <Route path="product/:productId" element={<ProductDetailPage />} />
@@ -108,6 +113,7 @@ const AppRoutes = () => {
           <Route path="content" element={<AdminContentPage />} />
           <Route path="branches" element={<AdminBranchesPage />} />
           <Route path="brands" element={<AdminBrandsPage />} />
+          <Route path="roles" element={<AdminRolesPage />} />
           <Route path="qna" element={<AdminQnAPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

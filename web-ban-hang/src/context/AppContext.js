@@ -26,6 +26,7 @@ const AppContext = createContext();
 export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
+  const [userPermissions, setUserPermissions] = useState({}); // State mới cho quyền
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState(null);
   const [cart, setCart] = useState([]);
@@ -164,6 +165,19 @@ export const AppProvider = ({ children }) => {
           (docSnap) => {
             if (docSnap.exists()) {
               setUserData(docSnap.data());
+              // Tải quyền dựa trên vai trò
+              const role = docSnap.data().role;
+              if (role === "admin") {
+                // Admin có tất cả các quyền
+                setUserPermissions({ isAdmin: true });
+              } else if (role) {
+                const roleRef = doc(db, "roles", role);
+                getDoc(roleRef).then((roleSnap) => {
+                  if (roleSnap.exists()) {
+                    setUserPermissions(roleSnap.data().permissions || {});
+                  }
+                });
+              }
             } else {
               const newUser = {
                 email: currentUser.email,
@@ -189,6 +203,7 @@ export const AppProvider = ({ children }) => {
       } else {
         setUser(null);
         setUserData(null);
+        setUserPermissions({});
         setLoading(false);
       }
     });
@@ -389,6 +404,7 @@ export const AppProvider = ({ children }) => {
   const value = {
     user,
     userData,
+    userPermissions, // Cung cấp quyền cho toàn ứng dụng
     loading,
     page,
     setPage,
