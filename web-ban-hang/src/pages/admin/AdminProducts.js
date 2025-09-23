@@ -14,12 +14,23 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
+import * as ExcelJS from "exceljs";
 
 import Spinner from "../../components/common/Spinner";
 import ProductForm from "../../components/product/ProductForm";
+import ProductExcelUploadModal from "../../components/product/ProductExcelUploadModal";
 import ToggleSwitch from "../../components/common/ToggleSwitch";
 import { formatCurrency } from "../../utils/formatCurrency";
-import { Edit, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  Upload,
+  Download,
+} from "lucide-react";
 import "../../styles/admin.css";
 
 const AdminProducts = () => {
@@ -27,6 +38,7 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showExcelModal, setShowExcelModal] = useState(false);
   const [categories, setCategories] = useState({});
   const [brands, setBrands] = useState([]);
   const [brandsMap, setBrandsMap] = useState({});
@@ -38,6 +50,10 @@ const AdminProducts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState({
+    key: "createdAt",
+    direction: "desc",
+  });
 
   const PRODUCTS_PER_PAGE = 10;
 
@@ -318,8 +334,89 @@ const AdminProducts = () => {
     return brandMatch && categoryMatch && searchMatch;
   });
 
+  // Logic sắp xếp
+  const sortedProducts = React.useMemo(() => {
+    let sortableItems = [...filteredProducts];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        // Xử lý giá của biến thể mặc định
+        if (sortConfig.key === "price") {
+          aValue = a.defaultVariantPrice ?? a.price;
+          bValue = b.defaultVariantPrice ?? b.price;
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === "asc" ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === "asc" ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredProducts, sortConfig]);
+
+  const handleExportExcel = async () => {
+    if (sortedProducts.length === 0) {
+      toast.warn("Không có sản phẩm nào để xuất.");
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Danh sách sản phẩm");
+
+    const headers = [
+      { header: "ID Sản phẩm", key: "id", width: 25 },
+      { header: "Tên sản phẩm", key: "name", width: 40 },
+      { header: "Danh mục", key: "categoryName", width: 25 },
+      { header: "Nhãn hiệu", key: "brandName", width: 25 },
+      { header: "Giá", key: "price", width: 15 },
+      { header: "Giá KM", key: "salePrice", width: 15 },
+      { header: "Đang KM", key: "onSale", width: 10 },
+    ];
+
+    branches.forEach((branch) => {
+      headers.push({
+        header: `Tồn kho ${branch.branchName}`,
+        key: `stock_${branch.id}`,
+        width: 20,
+      });
+    });
+
+    worksheet.columns = headers;
+
+    sortedProducts.forEach((product) => {
+      const row = {
+        id: product.id,
+        name: product.name,
+        categoryName: categories[product.categoryId] || "N/A",
+        brandName: brandsMap[product.brandId] || "N/A",
+        price: product.defaultVariantPrice ?? product.price,
+        salePrice: product.defaultVariantSalePrice ?? product.salePrice,
+        onSale: product.defaultVariantOnSale ?? product.onSale ? "Có" : "Không",
+      };
+      branches.forEach((branch) => {
+        row[`stock_${branch.id}`] = product.inventory?.[branch.id] || 0;
+      });
+      worksheet.addRow(row);
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "Danh_sach_san_pham.xlsx";
+    link.click();
+  };
+
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const paginatedProducts = filteredProducts.slice(
+  const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * PRODUCTS_PER_PAGE,
     currentPage * PRODUCTS_PER_PAGE
   );
@@ -330,15 +427,23 @@ const AdminProducts = () => {
     <div>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Quản lý Sản phẩm</h1>
-        <button
-          onClick={() => {
-            setEditingProduct(null);
-            setShowForm(true);
-          }}
-          className="px-4 py-2 bg-green-600 text-white rounded-md"
-        >
-          Thêm sản phẩm mới
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowExcelModal(true)}
+            className="admin-button-blue"
+          >
+            <Upload size={18} className="mr-2" /> Nhập từ Excel
+          </button>
+          <button
+            onClick={() => {
+              setEditingProduct(null);
+              setShowForm(true);
+            }}
+            className="admin-button-green"
+          >
+            Thêm sản phẩm mới
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6 flex items-center gap-4 flex-wrap">
@@ -405,6 +510,12 @@ const AdminProducts = () => {
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
           />
         </div>
+        <div className="ml-auto">
+          <button onClick={handleExportExcel} className="admin-button-teal">
+            <Download size={18} className="mr-2" />
+            Xuất Excel
+          </button>
+        </div>
       </div>
 
       {selectedProducts.size > 0 && (
@@ -435,6 +546,13 @@ const AdminProducts = () => {
           onSave={handleSaveProduct}
           onCancel={() => setShowForm(false)}
           brands={branches}
+        />
+      )}
+
+      {showExcelModal && (
+        <ProductExcelUploadModal
+          onCancel={() => setShowExcelModal(false)}
+          onUploadSuccess={() => setShowExcelModal(false)}
         />
       )}
 

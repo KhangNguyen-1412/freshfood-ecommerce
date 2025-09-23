@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  onSnapshot,
+} from "firebase/firestore";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
 import Spinner from "../../components/common/Spinner";
@@ -16,6 +25,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Download } from "lucide-react";
 import "../../styles/admin.css";
 
 const AdminReportsPage = () => {
@@ -24,6 +34,9 @@ const AdminReportsPage = () => {
   const [orders, setOrders] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("all");
+  const chartRef = useRef(null);
 
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -61,7 +74,19 @@ const AdminReportsPage = () => {
           "Không thể tải dữ liệu báo cáo, vui lòng kiểm tra console."
         );
       }
+
+      const unsubBranches = onSnapshot(
+        collection(db, "branches"),
+        (snapshot) => {
+          setBranches(
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+          );
+        }
+      );
+
       setLoading(false);
+
+      return () => unsubBranches();
     };
     fetchData();
   }, []);
@@ -70,6 +95,10 @@ const AdminReportsPage = () => {
     if (reportType === "topProducts") {
       const productSales = {};
       orders.forEach((order) => {
+        // Lọc đơn hàng theo chi nhánh nếu cần
+        if (selectedBranch !== "all" && order.branchId !== selectedBranch) {
+          return;
+        }
         order.items.forEach((item) => {
           productSales[item.id] = {
             name: item.name,
@@ -91,11 +120,13 @@ const AdminReportsPage = () => {
     if (reportType === "monthly") {
       filteredOrders = orders.filter(
         (o) =>
+          (selectedBranch === "all" || o.branchId === selectedBranch) &&
           o.createdAt.getFullYear() === selectedYear &&
           o.createdAt.getMonth() === selectedMonth
       );
       filteredPurchases = purchases.filter(
         (p) =>
+          (selectedBranch === "all" || p.branchId === selectedBranch) &&
           p.createdAt.getFullYear() === selectedYear &&
           p.createdAt.getMonth() === selectedMonth
       );
@@ -121,10 +152,14 @@ const AdminReportsPage = () => {
       chartData.forEach((d) => (d.LoiNhuan = d.DoanhThu - d.ChiPhi));
     } else if (reportType === "yearly") {
       filteredOrders = orders.filter(
-        (o) => o.createdAt.getFullYear() === selectedYear
+        (o) =>
+          (selectedBranch === "all" || o.branchId === selectedBranch) &&
+          o.createdAt.getFullYear() === selectedYear
       );
       filteredPurchases = purchases.filter(
-        (p) => p.createdAt.getFullYear() === selectedYear
+        (p) =>
+          (selectedBranch === "all" || p.branchId === selectedBranch) &&
+          p.createdAt.getFullYear() === selectedYear
       );
 
       chartData = Array.from({ length: 12 }, (_, i) => ({
@@ -159,9 +194,87 @@ const AdminReportsPage = () => {
       grossProfit: totalRevenue - totalCost,
       chartData,
     };
-  }, [orders, purchases, reportType, selectedYear, selectedMonth]);
+  }, [
+    orders,
+    purchases,
+    reportType,
+    selectedYear,
+    selectedMonth,
+    selectedBranch,
+  ]);
 
   const reportData = generateReport();
+
+  const handleExportPDF = async () => {
+    const doc = new jsPDF();
+    const reportTitle = `Bao Cao ${
+      reportType === "monthly"
+        ? `Thang ${selectedMonth + 1}/${selectedYear}`
+        : reportType === "yearly"
+        ? `Nam ${selectedYear}`
+        : "Top San Pham"
+    }`;
+
+    // Add title
+    doc.setFontSize(18);
+    doc.text(reportTitle, 14, 22);
+
+    if (reportType !== "topProducts") {
+      // Add summary
+      doc.setFontSize(11);
+      doc.text(
+        `Tong doanh thu: ${formatCurrency(reportData.totalRevenue)}`,
+        14,
+        32
+      );
+      doc.text(
+        `Chi phi nhap kho: ${formatCurrency(reportData.totalCost)}`,
+        14,
+        38
+      );
+      doc.text(
+        `Loi nhuan gop: ${formatCurrency(reportData.grossProfit)}`,
+        14,
+        44
+      );
+      doc.text(`Tong don hoan thanh: ${reportData.totalOrders}`, 14, 50);
+
+      // Add chart image
+      if (chartRef.current) {
+        const html2canvas = (await import("html2canvas")).default;
+        const canvas = await html2canvas(chartRef.current);
+        const imgData = canvas.toDataURL("image/png");
+        doc.addImage(imgData, "PNG", 14, 60, 180, 100);
+      }
+
+      // Add table data
+      doc.autoTable({
+        startY: 170,
+        head: [["Thoi gian", "Doanh Thu", "Chi Phi", "Loi Nhuan"]],
+        body: reportData.chartData.map((d) => [
+          d.name,
+          formatCurrency(d.DoanhThu),
+          formatCurrency(d.ChiPhi),
+          formatCurrency(d.LoiNhuan),
+        ]),
+        headStyles: { fillColor: [22, 163, 74] },
+      });
+    } else {
+      // Add top products table
+      doc.autoTable({
+        startY: 32,
+        head: [["#", "San Pham", "So Luong Da Ban"]],
+        body: reportData.topProducts.map((p, index) => [
+          index + 1,
+          p.name,
+          p.quantity,
+        ]),
+        headStyles: { fillColor: [22, 163, 74] },
+      });
+    }
+
+    doc.save(`${reportTitle}.pdf`);
+  };
 
   if (loading) return <Spinner />;
 
@@ -230,6 +343,21 @@ const AdminReportsPage = () => {
             <option value="monthly">Theo tháng</option>
             <option value="yearly">Theo năm</option>
             <option value="topProducts">Sản phẩm bán chạy</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label>Chi nhánh:</label>
+          <select
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            className="p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+          >
+            <option value="all">Tất cả chi nhánh</option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.branchName}
+              </option>
+            ))}
           </select>
         </div>
         {reportType !== "topProducts" && (
@@ -305,7 +433,7 @@ const AdminReportsPage = () => {
               </p>
             </div>
           </div>
-          <div className="dashboard-chart-container mt-6">
+          <div className="dashboard-chart-container mt-6" ref={chartRef}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Biểu đồ tổng quan</h2>
               <div className="flex gap-2">

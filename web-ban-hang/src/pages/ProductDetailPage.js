@@ -28,6 +28,7 @@ import {
   ChevronRight,
   X,
   Link as LinkIcon,
+  AlertTriangle,
 } from "lucide-react";
 import { Facebook, Twitter } from "lucide-react";
 import "react-inner-image-zoom/lib/styles.min.css";
@@ -35,8 +36,14 @@ import "../styles/pages.css";
 
 const ProductDetailPage = () => {
   const { productId } = useParams();
-  const { addToCart, user, wishlist, toggleWishlist, addRecentlyViewed } =
-    useAppContext();
+  const {
+    addToCart,
+    user,
+    wishlist,
+    toggleWishlist,
+    addRecentlyViewed,
+    selectedBranch,
+  } = useAppContext();
   const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
@@ -74,10 +81,18 @@ const ProductDetailPage = () => {
           setProduct(productData);
           addRecentlyViewed(productSnap.id);
 
-          const variantsData = variantsSnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const variantsDataPromises = variantsSnap.docs.map(async (doc) => {
+            const variantData = { id: doc.id, ...doc.data(), inventory: {} };
+            const inventoryQuery = query(collection(doc.ref, "inventory"));
+            const inventorySnapshot = await getDocs(inventoryQuery);
+            inventorySnapshot.forEach((invDoc) => {
+              variantData.inventory[invDoc.id] = invDoc.data().stock;
+            });
+            return variantData;
+          });
+
+          const variantsData = await Promise.all(variantsDataPromises);
+
           setVariants(variantsData);
 
           if (variantsData.length > 0) {
@@ -208,6 +223,12 @@ const ProductDetailPage = () => {
 
   const hasMultipleImages = product.imageUrls && product.imageUrls.length > 1;
 
+  const currentStock =
+    selectedVariant && selectedBranch
+      ? selectedVariant.inventory?.[selectedBranch.id] || 0
+      : product?.stock || 0;
+  const LOW_STOCK_THRESHOLD = 10;
+
   return (
     <>
       <SEO
@@ -336,6 +357,16 @@ const ProductDetailPage = () => {
                   {product.description || "Chưa có mô tả."}
                 </p>
               </div>
+
+              {/* --- CẢNH BÁO TỒN KHO THẤP --- */}
+              {currentStock > 0 && currentStock < LOW_STOCK_THRESHOLD && (
+                <div className="my-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-lg flex items-center gap-2 animate-pulse">
+                  <AlertTriangle size={20} />
+                  <span className="font-semibold">
+                    Chỉ còn {currentStock} sản phẩm! Hãy nhanh tay.
+                  </span>
+                </div>
+              )}
 
               {/* --- PHẦN CHIA SẺ --- */}
               <div className="flex items-center gap-4 mb-6 border-t dark:border-gray-600 pt-4">
