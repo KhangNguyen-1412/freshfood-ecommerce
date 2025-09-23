@@ -19,7 +19,7 @@ import Spinner from "../components/common/Spinner";
 import StarRating from "../components/common/StarRating";
 import ProductCard from "../components/product/ProductCard";
 import ProductQnA from "../components/product/ProductQnA"; // Import component mới
-import ReactImageMagnify from "react-image-magnify";
+import InnerImageZoom from "react-inner-image-zoom";
 import {
   Share2,
   Heart,
@@ -30,6 +30,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { Facebook, Twitter } from "lucide-react";
+import "react-inner-image-zoom/lib/InnerImageZoom/styles.css";
 import "../styles/pages.css";
 
 const ProductDetailPage = () => {
@@ -218,27 +219,13 @@ const ProductDetailPage = () => {
       <div className="page-container animate-fade-in">
         <div className="product-detail-main-panel">
           <div className="product-detail-grid">
-            <div className="relative">
-              <ReactImageMagnify
-                {...{
-                  smallImage: {
-                    alt: product.name,
-                    isFluidWidth: true,
-                    src: displayImage,
-                  },
-                  largeImage: {
-                    src: displayImage,
-                    width: 1200,
-                    height: 1200,
-                  },
-                  enlargedImageContainerDimensions: {
-                    width: "120%",
-                    height: "100%",
-                  },
-                  enlargedImageContainerClassName: "z-20",
-                  lensStyle: { backgroundColor: "rgba(0,0,0,.6)" },
-                  isHintEnabled: true,
-                }}
+            <div className="relative w-full h-auto max-h-[500px] rounded-lg shadow-md mb-4 overflow-hidden">
+              <InnerImageZoom
+                src={displayImage}
+                zoomSrc={displayImage} // Có thể dùng ảnh chất lượng cao hơn ở đây nếu có
+                alt={product.name}
+                zoomType="hover"
+                className="w-full h-full object-contain"
               />
               {hasMultipleImages && (
                 <>
