@@ -28,6 +28,7 @@ import {
   ChevronDown,
   Bell,
   Mic,
+  Camera,
 } from "lucide-react";
 
 import { useAppContext } from "../../context/AppContext";
@@ -61,6 +62,7 @@ const Header = () => {
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
 
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   // Cấu hình cho tìm kiếm bằng giọng nói
   const {
     transcript,
