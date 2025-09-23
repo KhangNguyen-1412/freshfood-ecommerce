@@ -19,6 +19,7 @@ import Spinner from "../components/common/Spinner";
 import StarRating from "../components/common/StarRating";
 import ProductCard from "../components/product/ProductCard";
 import ProductQnA from "../components/product/ProductQnA"; // Import component mới
+import ReactImageMagnify from "react-image-magnify";
 import {
   Share2,
   Heart,
@@ -217,14 +218,27 @@ const ProductDetailPage = () => {
       <div className="page-container animate-fade-in">
         <div className="product-detail-main-panel">
           <div className="product-detail-grid">
-            <div
-              className="relative cursor-pointer"
-              onClick={() => setIsLightboxOpen(true)}
-            >
-              <img
-                src={displayImage}
-                alt={product.name}
-                className="w-full h-auto max-h-[500px] object-contain rounded-lg shadow-md mb-4 transition-all duration-300"
+            <div className="relative">
+              <ReactImageMagnify
+                {...{
+                  smallImage: {
+                    alt: product.name,
+                    isFluidWidth: true,
+                    src: displayImage,
+                  },
+                  largeImage: {
+                    src: displayImage,
+                    width: 1200,
+                    height: 1200,
+                  },
+                  enlargedImageContainerDimensions: {
+                    width: "120%",
+                    height: "100%",
+                  },
+                  enlargedImageContainerClassName: "z-20",
+                  lensStyle: { backgroundColor: "rgba(0,0,0,.6)" },
+                  isHintEnabled: true,
+                }}
               />
               {hasMultipleImages && (
                 <>

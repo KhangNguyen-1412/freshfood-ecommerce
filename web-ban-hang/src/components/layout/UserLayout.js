@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header";
 import Footer from "./Footer";
 import BranchSelector from "../../pages/BranchSelector";
+import CompareBar from "../common/CompareBar"; // Import CompareBar
 import Breadcrumbs from "../common/Breadcrumbs";
 
 const pageVariants = {
@@ -39,6 +40,7 @@ const UserLayout = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+      <CompareBar /> {/* Thêm CompareBar ở đây */}
       <Footer />
     </div>
   );

@@ -46,6 +46,10 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [compareList, setCompareList] = useState(
+    () => JSON.parse(localStorage.getItem("compareList")) || []
+  );
+
   // Effect để lấy danh sách chi nhánh và khôi phục lựa chọn
   useEffect(() => {
     const fetchBranchesAndRestoreSelection = async () => {
@@ -342,6 +346,32 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const toggleCompare = (product) => {
+    setCompareList((prev) => {
+      const isComparing = prev.some((p) => p.id === product.id);
+      if (isComparing) {
+        toast.info(`Đã xóa "${product.name}" khỏi danh sách so sánh.`);
+        return prev.filter((p) => p.id !== product.id);
+      } else {
+        if (prev.length >= 4) {
+          toast.warn("Bạn chỉ có thể so sánh tối đa 4 sản phẩm.");
+          return prev;
+        }
+        toast.success(`Đã thêm "${product.name}" vào danh sách so sánh.`);
+        return [...prev, product];
+      }
+    });
+  };
+
+  const removeFromCompare = (productId) => {
+    setCompareList((prev) => prev.filter((p) => p.id !== productId));
+  };
+
+  const clearCompareList = () => {
+    setCompareList([]);
+    toast.info("Đã xóa danh sách so sánh.");
+  };
+
   if (initError) {
     return (
       <div className="flex items-center justify-center h-screen text-center p-4 bg-red-50">
@@ -387,6 +417,10 @@ export const AppProvider = ({ children }) => {
     recentlyViewed,
     addRecentlyViewed,
     createNotification, // Thêm hàm mới vào context
+    compareList,
+    toggleCompare,
+    removeFromCompare,
+    clearCompareList,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

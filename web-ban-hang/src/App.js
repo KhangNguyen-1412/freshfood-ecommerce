@@ -29,6 +29,7 @@ import ContentPage from "./pages/ContentPage";
 import NewsletterSignupPage from "./pages/NewsletterSignupPage";
 import BlogListPage from "./pages/BlogListPage"; // Import trang Blog
 import PaymentSuccessPage from "./pages/PaymentSuccessPage"; // Giả định bạn sẽ tạo trang này
+import ComparePage from "./pages/ComparePage"; // Import trang so sánh
 import PaymentCancelPage from "./pages/PaymentCancelPage"; // Giả định bạn sẽ tạo trang này
 import NotFoundPage from "./pages/NotFoundPage"; // Import trang 404
 
@@ -73,6 +74,7 @@ const AppRoutes = () => {
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="payment/success" element={<PaymentSuccessPage />} />
+        <Route path="compare" element={<ComparePage />} />
         <Route path="payment/cancel" element={<PaymentCancelPage />} />
         <Route path="product/:productId" element={<ProductDetailPage />} />
         <Route path="faq" element={<FaqPage />} />
