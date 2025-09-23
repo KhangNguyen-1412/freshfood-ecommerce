@@ -259,8 +259,12 @@ const ProductDetailPage = () => {
       />
       <div className="page-container animate-fade-in">
         <div className="product-detail-main-panel">
-          <div className="product-detail-grid">
-            <div className="relative w-full h-auto max-h-[500px] rounded-lg shadow-md mb-4 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Image Section */}
+            <div
+              className="relative w-full h-auto max-h-[500px] rounded-lg shadow-md overflow-hidden cursor-pointer"
+              onClick={() => setIsLightboxOpen(true)}
+            >
               <InnerImageZoom
                 src={displayImage}
                 zoomSrc={displayImage} // Có thể dùng ảnh chất lượng cao hơn ở đây nếu có
@@ -307,7 +311,8 @@ const ProductDetailPage = () => {
                 </>
               )}
             </div>
-            <div>
+            {/* Details Section */}
+            <div className="flex flex-col">
               <h1 className="product-detail-title">{product.name}</h1>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {product.categoryName || "Chưa phân loại"}

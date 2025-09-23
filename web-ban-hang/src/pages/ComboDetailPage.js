@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  writeBatch,
+} from "firebase/firestore";
 import { db } from "../firebase/config";
 import SEO from "../components/common/SEO";
 import Spinner from "../components/common/Spinner";
@@ -60,10 +66,28 @@ const ComboDetailPage = () => {
     fetchComboDetails();
   }, [comboId]);
 
-  const handleAddComboToCart = () => {
-    // Logic thêm vào giỏ hàng tương tự như ở trang CombosPage
-    // Bạn có thể tái sử dụng hoặc tùy chỉnh nếu cần
-    toast.info("Chức năng thêm vào giỏ hàng đang được phát triển.");
+  const handleAddComboToCart = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để thêm combo vào giỏ hàng.");
+      return;
+    }
+    if (!combo || !combo.products) return;
+
+    const batch = writeBatch(db);
+    combo.products.forEach((item) => {
+      // Cần có variantId và productId trong item của combo
+      if (item.variantId && item.productId) {
+        const cartItemRef = doc(db, "users", user.uid, "cart", item.variantId);
+        batch.set(
+          cartItemRef,
+          { quantity: item.quantity, productId: item.productId },
+          { merge: true }
+        );
+      }
+    });
+
+    await batch.commit();
+    toast.success(`Đã thêm combo "${combo.name}" vào giỏ hàng!`);
   };
 
   if (loading) return <Spinner />;

@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
 import { Link, useNavigate } from "react-router-dom";
 import {
   collection,
@@ -24,6 +27,7 @@ import {
   MapPin,
   ChevronDown,
   Bell,
+  Mic,
 } from "lucide-react";
 
 import { useAppContext } from "../../context/AppContext";
@@ -56,6 +60,21 @@ const Header = () => {
   const [notifications, setNotifications] = useState([]);
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
+
+  // Cấu hình cho tìm kiếm bằng giọng nói
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
+
+  // Cập nhật ô tìm kiếm khi người dùng nói
+  React.useEffect(() => {
+    if (transcript) {
+      setLocalSearch(transcript);
+    }
+  }, [transcript]);
 
   const handleLogout = async () => {
     const userId = user?.uid;
@@ -138,6 +157,22 @@ const Header = () => {
     }
   };
 
+  const handleVoiceSearch = () => {
+    if (!browserSupportsSpeechRecognition) {
+      return toast.error(
+        "Trình duyệt của bạn không hỗ trợ nhận dạng giọng nói."
+      );
+    }
+    if (listening) {
+      SpeechRecognition.stopListening();
+    } else {
+      resetTranscript();
+      SpeechRecognition.startListening({
+        continuous: false,
+        language: "vi-VN",
+      });
+    }
+  };
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
       setSearchQuery(localSearch);
@@ -223,6 +258,17 @@ const Header = () => {
                 size={20}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               />
+              <button
+                onClick={handleVoiceSearch}
+                title="Tìm kiếm bằng giọng nói"
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors ${
+                  listening
+                    ? "bg-red-500 text-white animate-pulse"
+                    : "text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                <Mic size={18} />
+              </button>
             </div>
           </div>
 
