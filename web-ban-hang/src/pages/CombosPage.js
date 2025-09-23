@@ -27,6 +27,9 @@ export const ComboCard = ({ combo }) => {
     // Logic thêm nhiều sản phẩm vào giỏ hàng cùng lúc
     const batch = writeBatch(db);
     combo.products.forEach((item) => {
+      // Sửa lỗi: Cần tham chiếu đến document của sản phẩm trong giỏ hàng,
+      // không phải collection 'cart'.
+      // Đường dẫn đúng là 'users/{uid}/cart/{variantId}'
       const cartItemRef = doc(db, "users", user.uid, "cart", item.variantId);
       batch.set(
         cartItemRef,

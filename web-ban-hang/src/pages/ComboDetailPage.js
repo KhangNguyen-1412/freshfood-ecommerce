@@ -76,11 +76,14 @@ const ComboDetailPage = () => {
     const batch = writeBatch(db);
     combo.products.forEach((item) => {
       // Cần có variantId và productId trong item của combo
+      // Sửa lỗi: Tham chiếu đến document của sản phẩm trong giỏ hàng.
+      // Đường dẫn đúng là 'users/{uid}/cart/{variantId}'
       if (item.variantId && item.productId) {
         const cartItemRef = doc(db, "users", user.uid, "cart", item.variantId);
         batch.set(
           cartItemRef,
-          { quantity: item.quantity, productId: item.productId },
+          // Sử dụng increment để cộng dồn số lượng nếu sản phẩm đã có trong giỏ
+          { quantity: increment(item.quantity), productId: item.productId },
           { merge: true }
         );
       }
