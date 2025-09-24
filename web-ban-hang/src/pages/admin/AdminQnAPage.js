@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
   collectionGroup,
-  collection, // Import collection
+  collection,
   query,
   orderBy,
   getDocs,
-  where, // Import where
+  where,
   updateDoc,
   deleteDoc,
   serverTimestamp,

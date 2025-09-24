@@ -13,8 +13,8 @@ import {
   serverTimestamp,
   getDocs,
 } from "firebase/firestore";
-import { useNavigate } from "react-router-dom"; // Thêm import useNavigate
-import { useAppContext } from "../../context/AppContext"; // Thêm import
+import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../../context/AppContext";
 import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
 import * as ExcelJS from "exceljs";
@@ -37,8 +37,8 @@ import {
 import "../../styles/admin.css";
 
 const AdminProducts = () => {
-  const { userData, userPermissions } = useAppContext(); // Lấy userData và userPermissions từ context
-  const navigate = useNavigate(); // Khởi tạo navigate
+  const { userData, userPermissions } = useAppContext();
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -61,17 +61,20 @@ const AdminProducts = () => {
   });
 
   const PRODUCTS_PER_PAGE = 10;
+  // Thêm biến này để kiểm tra quyền ghi
+  const canWrite = userPermissions?.isAdmin;
 
   // Tách riêng useEffect để kiểm tra quyền
   useEffect(() => {
     // Nếu đã có thông tin quyền và người dùng không phải admin cũng không có quyền xem sản phẩm
+    // LƯU Ý: Vẫn cho phép staff (userPermissions.products) truy cập trang, nhưng các nút sửa/xóa sẽ bị ẩn.
     if (
       userPermissions &&
       !userPermissions.isAdmin &&
       !userPermissions.products
     ) {
       toast.error("Bạn không có quyền truy cập chức năng này.");
-      navigate("/admin"); // Chuyển hướng về trang dashboard admin
+      navigate("/admin");
     }
   }, [userPermissions, navigate]);
 
@@ -180,9 +183,14 @@ const AdminProducts = () => {
       unsubBranches();
       unsubBrands();
     };
-  }, []); // Bỏ userData khỏi dependency array để nó chỉ chạy 1 lần
+  }, []);
 
   const handleToggleSale = async (productId, currentStatus, product) => {
+    // Kiểm tra quyền trước khi thực hiện
+    if (!canWrite) {
+      toast.error("Bạn không có quyền thực hiện thao tác này.");
+      return;
+    }
     const productRef = doc(db, "products", productId);
     try {
       const updateData = { onSale: !currentStatus };
@@ -197,6 +205,11 @@ const AdminProducts = () => {
   };
 
   const handleSalePriceChange = async (productId, newPrice) => {
+    // Kiểm tra quyền trước khi thực hiện
+    if (!canWrite) {
+      toast.error("Bạn không có quyền thực hiện thao tác này.");
+      return;
+    }
     const priceValue = Number(newPrice);
     if (isNaN(priceValue) || priceValue < 0) {
       toast.error("Vui lòng nhập một mức giá hợp lệ.");
@@ -212,6 +225,11 @@ const AdminProducts = () => {
   };
 
   const handleSaveProduct = async (productData) => {
+    // Kiểm tra quyền trước khi thực hiện
+    if (!canWrite) {
+      toast.error("Bạn không có quyền thực hiện thao tác này.");
+      return;
+    }
     const { mainData, variants, variantsToDelete } = productData;
     const batch = writeBatch(db);
 
@@ -253,7 +271,7 @@ const AdminProducts = () => {
           Object.keys(variantData).forEach((key) => {
             if (key.startsWith("inventory_")) {
               inventoryData[key.replace("inventory_", "")] = variantData[key];
-              delete variantData[key]; // Xóa khỏi dữ liệu chính của variant
+              delete variantData[key];
             }
           });
 
@@ -261,7 +279,7 @@ const AdminProducts = () => {
           const variantRef = variant.id.startsWith("new_")
             ? doc(collection(productRef, "variants"))
             : doc(productRef, "variants", variant.id);
-          batch.set(variantRef, variantData, { merge: true }); // Lưu dữ liệu chính
+          batch.set(variantRef, variantData, { merge: true });
           // Lưu dữ liệu tồn kho vào sub-collection của variant
           Object.entries(inventoryData).forEach(([branchId, stock]) => {
             const invRef = doc(variantRef, "inventory", branchId);
@@ -314,8 +332,14 @@ const AdminProducts = () => {
   };
 
   const handleDelete = async (productId) => {
+    // Kiểm tra quyền trước khi thực hiện
+    if (!canWrite) {
+      toast.error("Bạn không có quyền thực hiện thao tác này.");
+      return;
+    }
     if (window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) {
       await deleteDoc(doc(db, "products", productId));
+      toast.success("Xóa sản phẩm thành công!");
     }
   };
 
@@ -340,6 +364,11 @@ const AdminProducts = () => {
   };
 
   const handleBulkAssignBrand = async (brandId) => {
+    // Kiểm tra quyền trước khi thực hiện
+    if (!canWrite) {
+      toast.error("Bạn không có quyền thực hiện thao tác này.");
+      return;
+    }
     if (selectedProducts.size === 0 || !brandId) {
       toast.warn("Vui lòng chọn ít nhất một sản phẩm và một nhãn hiệu.");
       return;
@@ -483,21 +512,26 @@ const AdminProducts = () => {
       <div className="admin-page-header">
         <h1 className="admin-page-title">Quản lý Sản phẩm</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowExcelModal(true)}
-            className="admin-button-blue"
-          >
-            <Upload size={18} className="mr-2" /> Nhập từ Excel
-          </button>
-          <button
-            onClick={() => {
-              setEditingProduct(null);
-              setShowForm(true);
-            }}
-            className="admin-button-green"
-          >
-            Thêm sản phẩm mới
-          </button>
+          {/* Ẩn nút nếu không có quyền ghi */}
+          {canWrite && (
+            <>
+              <button
+                onClick={() => setShowExcelModal(true)}
+                className="admin-button-blue"
+              >
+                <Upload size={18} className="mr-2" /> Nhập từ Excel
+              </button>
+              <button
+                onClick={() => {
+                  setEditingProduct(null);
+                  setShowForm(true);
+                }}
+                className="admin-button-green"
+              >
+                Thêm sản phẩm mới
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -573,7 +607,7 @@ const AdminProducts = () => {
         </div>
       </div>
 
-      {selectedProducts.size > 0 && (
+      {selectedProducts.size > 0 && canWrite && (
         <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg my-4 flex items-center gap-4 animate-fade-in">
           <span className="font-semibold">
             {selectedProducts.size} sản phẩm đã chọn
@@ -633,7 +667,7 @@ const AdminProducts = () => {
                 <th className="p-2 text-left">Giá</th>
                 <th className="p-2 text-left">Tồn kho</th>
                 <th className="p-2 text-center">Khuyến mãi</th>
-                <th className="p-2 text-left">Hành động</th>
+                {canWrite && <th className="p-2 text-left">Hành động</th>}
               </tr>
             </thead>
             <tbody>
@@ -667,6 +701,7 @@ const AdminProducts = () => {
                             handleSalePriceChange(p.id, e.target.value)
                           }
                           className="p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600 w-28 font-bold text-red-500"
+                          disabled={!canWrite}
                         />
                         <span className="text-xs line-through text-gray-500">
                           {formatCurrency(p.price)}
@@ -697,22 +732,26 @@ const AdminProducts = () => {
                       onChange={() =>
                         handleToggleSale(p.id, p.onSale || false, p)
                       }
+                      disabled={!canWrite}
                     />
                   </td>
-                  <td className="p-2 flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(p)}
-                      className="text-blue-500 hover:text-blue-700"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
+                  {/* Ẩn cột "Hành động" nếu không có quyền ghi */}
+                  {canWrite && (
+                    <td className="p-2 flex space-x-2">
+                      <button
+                        onClick={() => handleEdit(p)}
+                        className="text-blue-500 hover:text-blue-700"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
