@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
   collectionGroup,
+  collection, // Import collection
   query,
-  where,
   orderBy,
   getDocs,
-  getDoc, // Import getDoc
+  where, // Import where
   updateDoc,
-  doc,
+  deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../../firebase/config";
@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
 const AdminQnAPage = () => {
@@ -43,29 +44,56 @@ const AdminQnAPage = () => {
   const fetchAllQuestions = React.useCallback(async () => {
     setLoading(true);
     try {
-      let q = query(
+      // 1. Lấy tất cả các câu hỏi bằng collectionGroup
+      const questionsQuery = query(
         collectionGroup(db, "questions"),
         orderBy("createdAt", "desc")
       );
-      const snapshot = await getDocs(q);
-      const questionsData = await Promise.all(
-        snapshot.docs.map(async (qDoc) => {
-          const data = qDoc.data();
-          const productRef = qDoc.ref.parent.parent;
-          const productSnap = await getDoc(productRef);
-          return {
-            id: qDoc.id,
-            ...data,
-            productId: productRef.id,
-            productName: productSnap.data()?.name || "Sản phẩm không xác định",
-            productRef: qDoc.ref,
-          };
-        })
-      );
+      const questionsSnapshot = await getDocs(questionsQuery);
+      const questions = questionsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        productId: doc.ref.parent.parent.id,
+        productRef: doc.ref,
+      }));
+
+      // 2. Lấy danh sách các ID sản phẩm duy nhất
+      const productIds = [...new Set(questions.map((q) => q.productId))];
+
+      if (productIds.length === 0) {
+        setAllQuestions([]);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Lấy thông tin sản phẩm theo từng đợt (tối đa 30 ID mỗi lần)
+      const productsMap = new Map();
+      const CHUNK_SIZE = 30; // Firestore 'in' query limit
+      for (let i = 0; i < productIds.length; i += CHUNK_SIZE) {
+        const chunk = productIds.slice(i, i + CHUNK_SIZE);
+        const productsQuery = query(
+          collection(db, "products"),
+          where("__name__", "in", chunk)
+        );
+        const productsSnapshot = await getDocs(productsQuery);
+        productsSnapshot.forEach((doc) => {
+          productsMap.set(doc.id, doc.data());
+        });
+      }
+
+      // 4. Kết hợp dữ liệu câu hỏi và sản phẩm
+      const questionsData = questions.map((q) => ({
+        ...q,
+        productName:
+          productsMap.get(q.productId)?.name || "Sản phẩm không xác định",
+      }));
+
       setAllQuestions(questionsData);
     } catch (error) {
       console.error("Lỗi khi tải câu hỏi:", error.message);
-      toast.error("Không thể tải danh sách câu hỏi.");
+      toast.error(
+        "Không thể tải danh sách câu hỏi. Vui lòng kiểm tra chỉ mục Firestore."
+      );
     } finally {
       setLoading(false);
     }
@@ -149,6 +177,25 @@ const AdminQnAPage = () => {
       toast.error("Đã có lỗi xảy ra.");
     } finally {
       setSubmittingId(null);
+    }
+  };
+
+  const handleDeleteQuestion = async (question) => {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa câu hỏi về sản phẩm "${question.productName}"? Hành động này không thể hoàn tác.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteDoc(question.productRef);
+      toast.success("Đã xóa câu hỏi thành công.");
+      setAllQuestions((prev) => prev.filter((q) => q.id !== question.id));
+    } catch (error) {
+      console.error("Lỗi khi xóa câu hỏi:", error);
+      toast.error("Đã có lỗi xảy ra khi xóa câu hỏi.");
     }
   };
 
@@ -266,11 +313,20 @@ const AdminQnAPage = () => {
                       Người hỏi: {q.userName}
                     </p>
                   </div>
-                  <p className="text-xs text-gray-400">
-                    {q.createdAt?.toDate
-                      ? new Date(q.createdAt.toDate()).toLocaleString("vi-VN")
-                      : "..."}
-                  </p>
+                  <div className="flex items-center gap-4">
+                    <p className="text-xs text-gray-400">
+                      {q.createdAt?.toDate
+                        ? new Date(q.createdAt.toDate()).toLocaleString("vi-VN")
+                        : "..."}
+                    </p>
+                    <button
+                      onClick={() => handleDeleteQuestion(q)}
+                      className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20"
+                      title="Xóa câu hỏi này"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
                 <p className="my-3 text-lg font-medium flex items-start">
                   <MessageCircle
