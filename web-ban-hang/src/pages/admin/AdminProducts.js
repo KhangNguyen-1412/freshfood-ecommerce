@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import {
+  getDoc,
   collection,
   query,
   orderBy,
@@ -12,6 +13,8 @@ import {
   serverTimestamp,
   getDocs,
 } from "firebase/firestore";
+import { useNavigate } from "react-router-dom"; // Thêm import useNavigate
+import { useAppContext } from "../../context/AppContext"; // Thêm import
 import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
 import * as ExcelJS from "exceljs";
@@ -34,6 +37,8 @@ import {
 import "../../styles/admin.css";
 
 const AdminProducts = () => {
+  const { userData, userPermissions } = useAppContext(); // Lấy userData và userPermissions từ context
+  const navigate = useNavigate(); // Khởi tạo navigate
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -57,9 +62,23 @@ const AdminProducts = () => {
 
   const PRODUCTS_PER_PAGE = 10;
 
+  // Tách riêng useEffect để kiểm tra quyền
+  useEffect(() => {
+    // Nếu đã có thông tin quyền và người dùng không phải admin cũng không có quyền xem sản phẩm
+    if (
+      userPermissions &&
+      !userPermissions.isAdmin &&
+      !userPermissions.products
+    ) {
+      toast.error("Bạn không có quyền truy cập chức năng này.");
+      navigate("/admin"); // Chuyển hướng về trang dashboard admin
+    }
+  }, [userPermissions, navigate]);
+
   useEffect(() => {
     setLoading(true);
 
+    // Query lấy sản phẩm
     const unsubProducts = onSnapshot(
       query(collection(db, "products"), orderBy("createdAt", "desc")),
       async (snapshot) => {
@@ -70,24 +89,42 @@ const AdminProducts = () => {
               ...productDoc.data(),
               inventory: {},
             };
-            // Lấy tổng tồn kho từ tất cả các biến thể
+
             const variantsQuery = query(
               collection(db, "products", productDoc.id, "variants")
             );
             const variantsSnapshot = await getDocs(variantsQuery);
-            const inventoryPromises = variantsSnapshot.docs.map(
-              async (variantDoc) => {
-                const inventorySnapshot = await getDocs(
-                  collection(variantDoc.ref, "inventory")
-                );
+
+            if (!variantsSnapshot.empty) {
+              // Nếu sản phẩm CÓ biến thể, tính tổng tồn kho từ các biến thể
+              const inventoryPromises = variantsSnapshot.docs.map(
+                async (variantDoc) => {
+                  const inventorySnapshot = await getDocs(
+                    collection(variantDoc.ref, "inventory")
+                  );
+                  inventorySnapshot.forEach((invDoc) => {
+                    productData.inventory[invDoc.id] =
+                      (productData.inventory[invDoc.id] || 0) +
+                      invDoc.data().stock;
+                  });
+                }
+              );
+              await Promise.all(inventoryPromises);
+            } else {
+              // Nếu sản phẩm KHÔNG có biến thể, lấy tồn kho từ chính sản phẩm đó
+              // Đọc sub-collection 'inventory' của sản phẩm cha
+              const inventorySnapshot = await getDocs(
+                collection(productDoc.ref, "inventory")
+              );
+              if (!inventorySnapshot.empty) {
                 inventorySnapshot.forEach((invDoc) => {
-                  productData.inventory[invDoc.id] =
-                    (productData.inventory[invDoc.id] || 0) +
-                    invDoc.data().stock;
+                  productData.inventory[invDoc.id] = invDoc.data().stock || 0;
                 });
+              } else {
+                // Trường hợp cũ, nếu sản phẩm chưa có sub-collection inventory
+                productData.inventory["default"] = productData.stock || 0;
               }
-            );
-            await Promise.all(inventoryPromises);
+            }
             return productData;
           })
         );
@@ -143,7 +180,7 @@ const AdminProducts = () => {
       unsubBranches();
       unsubBrands();
     };
-  }, []);
+  }, []); // Bỏ userData khỏi dependency array để nó chỉ chạy 1 lần
 
   const handleToggleSale = async (productId, currentStatus, product) => {
     const productRef = doc(db, "products", productId);
@@ -647,7 +684,9 @@ const AdminProducts = () => {
                       >
                         <span>{branch.branchName}:</span>
                         <span className="font-semibold">
-                          {p.inventory?.[branch.id] || 0}
+                          {p.inventory?.[branch.id] ||
+                            p.inventory?.default ||
+                            0}
                         </span>
                       </div>
                     ))}

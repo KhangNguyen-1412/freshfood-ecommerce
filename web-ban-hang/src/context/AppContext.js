@@ -152,6 +152,8 @@ export const AppProvider = ({ children }) => {
 
       if (currentUser) {
         try {
+          // Bắt buộc làm mới token để nhận custom claims mới nhất
+          // Điều này rất quan trọng sau khi vai trò người dùng thay đổi
           await currentUser.getIdToken(true);
         } catch (error) {
           console.error("Lỗi khi làm mới token:", error);
@@ -170,12 +172,16 @@ export const AppProvider = ({ children }) => {
               if (role === "admin") {
                 // Admin có tất cả các quyền
                 setUserPermissions({ isAdmin: true });
+                setLoading(false);
               } else if (role) {
                 const roleRef = doc(db, "roles", role);
                 getDoc(roleRef).then((roleSnap) => {
                   if (roleSnap.exists()) {
                     setUserPermissions(roleSnap.data().permissions || {});
+                  } else {
+                    setUserPermissions({}); // Vai trò không tồn tại, không có quyền
                   }
+                  setLoading(false);
                 });
               }
             } else {
@@ -188,9 +194,11 @@ export const AppProvider = ({ children }) => {
                   currentUser.photoURL ||
                   `https://i.pravatar.cc/150?u=${currentUser.uid}`,
               };
-              setDoc(userDocRef, newUser).then(() => setUserData(newUser));
+              setDoc(userDocRef, newUser).then(() => {
+                setUserData(newUser);
+                setLoading(false);
+              });
             }
-            setLoading(false);
           },
           (error) => {
             console.error("Lỗi khi lấy user data:", error);
@@ -225,14 +233,40 @@ export const AppProvider = ({ children }) => {
     if (user) {
       const cartRef = collection(db, "users", user.uid, "cart");
       const unsubscribe = onSnapshot(query(cartRef), async (snapshot) => {
+        if (snapshot.empty) {
+          setCart([]);
+          return;
+        }
         const cartItemsPromises = snapshot.docs.map(async (cartDoc) => {
-          const productRef = doc(db, "products", cartDoc.id);
-          const productSnap = await getDoc(productRef);
-          if (productSnap.exists()) {
+          const cartData = cartDoc.data();
+          const variantId = cartDoc.id; // ID của document trong cart chính là variantId
+          const productId = cartData.productId; // Lấy productId từ dữ liệu của cart item
+
+          // Nếu không có productId (dữ liệu cũ), hoặc không có variantId, bỏ qua
+          if (!productId || !variantId) {
+            console.warn(
+              "Cart item is missing productId or variantId",
+              cartData
+            );
+            return null;
+          }
+
+          const productRef = doc(db, "products", productId);
+          // Lấy thông tin biến thể bằng variantId
+          const variantRef = doc(productRef, "variants", variantId);
+
+          const [productSnap, variantSnap] = await Promise.all([
+            getDoc(productRef),
+            getDoc(variantRef),
+          ]);
+
+          if (productSnap.exists() && variantSnap.exists()) {
             return {
-              ...productSnap.data(),
-              id: productSnap.id,
-              quantity: cartDoc.data().quantity,
+              ...productSnap.data(), // Dữ liệu sản phẩm cha
+              ...variantSnap.data(), // Ghi đè bằng dữ liệu biến thể (giá, ảnh, tên biến thể...)
+              id: variantId, // ID của item trong giỏ hàng là ID của biến thể
+              productId: productId, // Đảm bảo productId được giữ lại
+              quantity: cartData.quantity,
             };
           }
           return null;
@@ -254,11 +288,22 @@ export const AppProvider = ({ children }) => {
       toast.error("Vui lòng đăng nhập để thêm sản phẩm.");
       return;
     }
-    const cartItemRef = doc(db, "users", user.uid, "cart", product.id);
+    // Sửa lỗi: Luôn sử dụng ID của biến thể (variant) làm ID trong giỏ hàng.
+    // Nếu sản phẩm không có biến thể, ID sản phẩm và ID biến thể mặc định là một.
+    // product.id ở đây có thể là variantId nếu được truyền từ ProductDetailPage.
+    const cartItemId = product.id;
+    if (!cartItemId) {
+      console.error("Attempted to add a product to cart with no ID:", product);
+      toast.error("Không thể thêm sản phẩm không xác định vào giỏ hàng.");
+      return;
+    }
+
+    const cartItemRef = doc(db, "users", user.uid, "cart", cartItemId);
     await setDoc(
       cartItemRef,
       {
         quantity: increment(quantity),
+        productId: product.productId || product.id, // Lưu ID sản phẩm cha
         addedAt: serverTimestamp(),
       },
       { merge: true }

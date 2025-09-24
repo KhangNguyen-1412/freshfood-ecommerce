@@ -40,16 +40,7 @@ const AdminQnAPage = () => {
 
   const QUESTIONS_PER_PAGE = 10;
 
-  useEffect(() => {
-    // Chuyển hướng nếu không phải admin
-    if (userData && userData.role !== "admin") {
-      toast.error("Bạn không có quyền truy cập trang này.");
-      navigate("/");
-    }
-  }, [userData, navigate]);
-
   const fetchAllQuestions = React.useCallback(async () => {
-    if (userData?.role !== "admin") return;
     setLoading(true);
     try {
       let q = query(
@@ -78,11 +69,19 @@ const AdminQnAPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [userData]);
+  }, []);
 
   useEffect(() => {
-    fetchAllQuestions();
-  }, [fetchAllQuestions]);
+    // Gộp logic kiểm tra quyền và fetch data vào một useEffect
+    if (userData) {
+      if (userData.role === "admin") {
+        fetchAllQuestions();
+      } else {
+        toast.error("Bạn không có quyền truy cập trang này.");
+        navigate("/admin"); // Chuyển hướng về trang an toàn hơn
+      }
+    }
+  }, [userData, navigate, fetchAllQuestions]);
 
   useEffect(() => {
     let tempQuestions = [...allQuestions];

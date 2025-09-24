@@ -9,6 +9,7 @@ import {
   deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import { useAppContext } from "../../context/AppContext";
 import { db } from "../../firebase/config";
 import { toast } from "react-toastify";
 import Spinner from "../../components/common/Spinner";
@@ -17,6 +18,7 @@ import { formatCurrency } from "../../utils/formatCurrency";
 import { Edit, Trash2, PackagePlus, Search } from "lucide-react";
 
 const AdminCombosPage = () => {
+  const { userPermissions } = useAppContext();
   const [combos, setCombos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -26,6 +28,14 @@ const AdminCombosPage = () => {
   const [searchTerm, setSearchTerm] = useState(""); // State mới cho tìm kiếm
 
   useEffect(() => {
+    // KIỂM TRA QUYỀN TRƯỚC KHI TRUY VẤN
+    if (!userPermissions.isAdmin && !userPermissions.combos) {
+      toast.error("Bạn không có quyền truy cập chức năng này.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+
     const qCombos = query(collection(db, "combos"));
     const unsubCombos = onSnapshot(qCombos, (snapshot) => {
       setCombos(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
@@ -53,7 +63,7 @@ const AdminCombosPage = () => {
       unsubCombos();
       unsubProducts();
     };
-  }, []);
+  }, [userPermissions]);
 
   const handleSaveCombo = async (comboData) => {
     try {
@@ -93,7 +103,16 @@ const AdminCombosPage = () => {
     }
   };
 
-  if (loading) return <Spinner />;
+  // Hiển thị Spinner hoặc thông báo lỗi nếu không có quyền
+  if (loading) {
+    return <Spinner />;
+  } else if (!userPermissions.isAdmin && !userPermissions.combos) {
+    return (
+      <div className="p-4 text-red-500">
+        Bạn không có quyền truy cập trang này.
+      </div>
+    );
+  }
 
   // Lọc combo dựa trên trạng thái đã chọn
   const filteredCombos = combos.filter((combo) => {
@@ -191,7 +210,7 @@ const AdminCombosPage = () => {
                   <span className="font-semibold">{combo.name}</span>
                 </td>
                 <td className="p-2 font-semibold text-green-600">
-                  {formatCurrency(combo.totalPrice)}
+                  {formatCurrency(combo.totalPrice || 0)}
                 </td>
                 <td className="p-2">{combo.products?.length || 0}</td>
                 <td className="p-2 text-center">

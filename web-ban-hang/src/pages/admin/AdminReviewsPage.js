@@ -11,6 +11,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase/config";
 import { useAppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
@@ -26,16 +27,23 @@ const AdminReviewsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [productsMap, setProductsMap] = useState({});
 
-  const { userData } = useAppContext();
+  const { userData, userPermissions } = useAppContext();
+  const navigate = useNavigate();
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
 
   useEffect(() => {
+    // KIỂM TRA QUYỀN TRƯỚC KHI TRUY VẤN
+    if (!userPermissions.isAdmin && !userPermissions.reviews) {
+      toast.error("Bạn không có quyền truy cập chức năng này.");
+      navigate("/admin"); // Chuyển hướng về trang admin dashboard
+      return;
+    }
+
     const fetchData = async () => {
       setLoading(true);
       try {
         // Lấy tên sản phẩm để hiển thị
-        // SỬA LẠI DÒNG DƯỚI ĐÂY: Dùng getDocs() thay vì .get()
         const productsSnapshot = await getDocs(collection(db, "products"));
         const pMap = productsSnapshot.docs.reduce((map, doc) => {
           map[doc.id] = doc.data().name;
@@ -68,7 +76,7 @@ const AdminReviewsPage = () => {
     };
 
     fetchData();
-  }, []);
+  }, [userPermissions, navigate]);
 
   useEffect(() => {
     if (searchTerm === "") {

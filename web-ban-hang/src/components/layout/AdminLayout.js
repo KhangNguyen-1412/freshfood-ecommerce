@@ -22,6 +22,7 @@ import {
   Copyright,
   Mail,
   Package,
+  LifeBuoy,
 } from "lucide-react";
 import "../../styles/layout.css";
 
@@ -115,6 +116,12 @@ const AdminLayout = () => {
             <Mail size={18} className="mr-2" />
             Email Marketing
           </Link>
+          {canAccess("orders") && ( // Giả sử nhân viên đơn hàng có thể chat
+            <Link to="/admin/chat" className="admin-sidebar-button">
+              <LifeBuoy size={18} className="mr-2" />
+              Hỗ trợ Khách hàng
+            </Link>
+          )}
 
           <div className="pt-2 mt-2 border-t border-gray-700"></div>
           {canAccess("customers") && (

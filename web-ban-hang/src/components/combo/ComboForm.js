@@ -66,7 +66,12 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : type === "number"
+          ? Number(value)
+          : value,
     }));
   };
 
@@ -207,10 +212,6 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
           <div className="space-y-4">
             {formData.products.map((p, index) => {
               const productVariants = variantsCache[p.productId] || [];
-
-              // Chỉ hiển thị ô chọn biến thể khi sản phẩm có nhiều hơn 1 biến thể
-              const showVariantSelect = productVariants.length > 1;
-
               return (
                 <div
                   key={index}
@@ -233,33 +234,23 @@ const ComboForm = ({ combo, products, onSave, onCancel }) => {
                       ))}
                     </select>
                   </div>
-                  {showVariantSelect ? (
-                    <div className="md:col-span-4">
-                      <select
-                        value={p.variantId}
-                        onChange={(e) =>
-                          handleProductChange(
-                            index,
-                            "variantId",
-                            e.target.value
-                          )
-                        }
-                        className="admin-input"
-                        required
-                      >
-                        <option value="">-- Chọn phiên bản --</option>
-                        {productVariants.map((variant) => (
-                          <option key={variant.id} value={variant.id}>
-                            {variant.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="md:col-span-4">
-                      {/* Ẩn đi nếu không cần chọn */}
-                    </div>
-                  )}
+                  <div className="md:col-span-4">
+                    <select
+                      value={p.variantId}
+                      onChange={(e) =>
+                        handleProductChange(index, "variantId", e.target.value)
+                      }
+                      className="admin-input"
+                      required // Bắt buộc phải chọn một biến thể
+                    >
+                      <option value="">-- Chọn phiên bản --</option>
+                      {productVariants.map((variant) => (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="md:col-span-2">
                     <input
                       type="number"

@@ -6,8 +6,8 @@ import { AppProvider, useAppContext } from "./context/AppContext";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
 // Import Layouts
-import Header from "./components/layout/Header";
-import Footer from "./components/layout/Footer";
+// import Header from "./components/layout/Header";
+// import Footer from "./components/layout/Footer";
 import UserLayout from "./components/layout/UserLayout"; // Import UserLayout mới
 import AdminLayout from "./components/layout/AdminLayout";
 
@@ -22,8 +22,8 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import ProfilePage from "./pages/ProfilePage";
-import OrderDetailPage from "./pages/OrderDetailPage";
-import ReviewOrderPage from "./pages/ReviewOrderPage";
+// import OrderDetailPage from "./pages/OrderDetailPage";
+// import ReviewOrderPage from "./pages/ReviewOrderPage";
 import FaqPage from "./pages/FaqPage";
 import ContentPage from "./pages/ContentPage";
 import NewsletterSignupPage from "./pages/NewsletterSignupPage";
@@ -52,8 +52,9 @@ import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminBranchesPage from "./pages/admin/AdminBranchesPage";
 import AdminBrandsPage from "./pages/admin/AdminBrandsPage";
 import AdminCombosPage from "./pages/admin/AdminCombosPage";
-import AdminRolesPage from "./pages/admin/AdminRolesPage"; // Import trang mới
+import AdminRolesPage from "./pages/admin/AdminRolesPage";
 import AdminQnAPage from "./pages/admin/AdminQnAPage";
+import AdminChatPage from "./pages/admin/AdminChatPage";
 
 // --- Main Routing Component ---
 const AppRoutes = () => {
@@ -117,6 +118,7 @@ const AppRoutes = () => {
           <Route path="combos" element={<AdminCombosPage />} />
           <Route path="roles" element={<AdminRolesPage />} />
           <Route path="qna" element={<AdminQnAPage />} />
+          <Route path="chat" element={<AdminChatPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

@@ -6,6 +6,7 @@ import Footer from "./Footer";
 import BranchSelector from "../../pages/BranchSelector";
 import CompareBar from "../common/CompareBar"; // Import CompareBar
 import Breadcrumbs from "../common/Breadcrumbs";
+import ChatWidget from "../chat/ChatWidget"; // Import ChatWidget
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -42,6 +43,7 @@ const UserLayout = () => {
       </main>
       <CompareBar /> {/* Thêm CompareBar ở đây */}
       <Footer />
+      <ChatWidget /> {/* Thêm ChatWidget ở đây */}
     </div>
   );
 };

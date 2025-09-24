@@ -7,6 +7,7 @@ import {
   getDocs,
   writeBatch,
   increment,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import SEO from "../components/common/SEO";
@@ -18,7 +19,7 @@ import { ShoppingCart } from "lucide-react";
 
 const ComboDetailPage = () => {
   const { comboId } = useParams();
-  const { user, addToCart } = useAppContext();
+  const { user } = useAppContext(); // Đảm bảo chỉ lấy user, không lấy addToCart
   const [combo, setCombo] = useState(null);
   const [comboProducts, setComboProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,22 +40,40 @@ const ComboDetailPage = () => {
           // Lấy thông tin chi tiết của từng sản phẩm trong combo
           const productPromises = comboData.products.map(async (item) => {
             const productRef = doc(db, "products", item.productId);
-            const variantRef = doc(productRef, "variants", item.variantId);
+
+            // If variantId exists, fetch both product and variant. Otherwise, just the product.
+            const variantRef = item.variantId
+              ? doc(db, "products", item.productId, "variants", item.variantId)
+              : null;
 
             const [productSnap, variantSnap] = await Promise.all([
               getDoc(productRef),
-              getDoc(variantRef),
+              variantRef ? getDoc(variantRef) : Promise.resolve(null), // Only fetch if ref exists
             ]);
 
-            return {
-              ...item,
-              productDetails: productSnap.data(),
-              variantDetails: variantSnap.data(),
-            };
+            // Check if product exists, and if variant was supposed to exist, check that too.
+            if (
+              productSnap.exists() &&
+              (!variantRef || variantSnap?.exists())
+            ) {
+              return {
+                ...item,
+                productDetails: productSnap.data(),
+                variantDetails: variantSnap?.data() || null, // Handle case where variant doesn't exist
+              };
+            }
+            // Trả về null nếu sản phẩm hoặc biến thể không tồn tại
+            // để tránh lỗi ở các bước sau
+            console.warn(
+              `Không tìm thấy sản phẩm ${item.productId} hoặc biến thể ${item.variantId}`
+            );
+            return null;
           });
 
-          const productsWithDetails = await Promise.all(productPromises);
-          setComboProducts(productsWithDetails);
+          const productsWithDetails = (
+            await Promise.all(productPromises)
+          ).filter(Boolean);
+          setComboProducts(productsWithDetails); // Lọc bỏ các sản phẩm null
         }
       } catch (error) {
         console.error("Lỗi khi tải chi tiết combo:", error);
@@ -79,13 +98,27 @@ const ComboDetailPage = () => {
       // Cần có variantId và productId trong item của combo
       // Sửa lỗi: Tham chiếu đến document của sản phẩm trong giỏ hàng.
       // Đường dẫn đúng là 'users/{uid}/cart/{variantId}'
-      if (item.variantId && item.productId) {
-        const cartItemRef = doc(db, "users", user.uid, "cart", item.variantId);
+      // Sửa lỗi: Đảm bảo variantId là một chuỗi hợp lệ, không rỗng.
+      if (
+        item.productId &&
+        typeof item.variantId === "string" &&
+        item.variantId.trim() !== ""
+      ) {
+        const cartItemRef = doc(db, "users", user.uid, "cart", item.variantId); // Sửa lại đường dẫn
         batch.set(
           cartItemRef,
           // Sử dụng increment để cộng dồn số lượng nếu sản phẩm đã có trong giỏ
-          { quantity: increment(item.quantity), productId: item.productId },
+          {
+            quantity: increment(item.quantity),
+            productId: item.productId, // Giữ nguyên productId của sản phẩm cha
+            addedAt: serverTimestamp(),
+          },
           { merge: true }
+        );
+      } else {
+        console.warn(
+          "Bỏ qua sản phẩm trong combo vì thiếu productId hoặc variantId:",
+          item
         );
       }
     });
@@ -122,7 +155,7 @@ const ComboDetailPage = () => {
               {combo.description}
             </p>
             <p className="text-4xl font-bold text-green-600 mb-6">
-              {formatCurrency(combo.totalPrice)}
+              {formatCurrency(combo.totalPrice || 0)}
             </p>
             <button
               onClick={handleAddComboToCart}
@@ -135,38 +168,44 @@ const ComboDetailPage = () => {
 
         <div className="mt-12 border-t dark:border-gray-700 pt-8">
           <h2 className="text-2xl font-bold mb-6">Các sản phẩm trong Combo</h2>
-          <div className="space-y-4">
-            {comboProducts.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
-              >
-                <img
-                  src={
-                    item.variantDetails.imageUrl ||
-                    item.productDetails.imageUrls?.[0] ||
-                    "https://placehold.co/100"
-                  }
-                  alt={item.productDetails.name}
-                  className="w-20 h-20 object-cover rounded-md"
-                />
-                <div className="flex-grow">
-                  <Link
-                    to={`/product/${item.productId}`}
-                    className="font-semibold text-lg hover:underline"
-                  >
-                    {item.productDetails.name}
-                  </Link>
-                  <p className="text-sm text-gray-500">
-                    {item.variantDetails.name}
-                  </p>
+          {comboProducts.length > 0 ? (
+            <div className="space-y-4">
+              {comboProducts.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
+                >
+                  <img
+                    src={
+                      item.variantDetails?.imageUrl ||
+                      item.productDetails?.imageUrls?.[0] ||
+                      "https://placehold.co/100"
+                    }
+                    alt={item.productDetails?.name || "Sản phẩm"}
+                    className="w-20 h-20 object-cover rounded-md"
+                  />
+                  <div className="flex-grow">
+                    <Link
+                      to={`/product/${item.productId}`}
+                      className="font-semibold text-lg hover:underline"
+                    >
+                      {item.productDetails?.name || "Sản phẩm không xác định"}
+                    </Link>
+                    <p className="text-sm text-gray-500">
+                      {item.variantDetails?.name || "Phiên bản mặc định"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">x {item.quantity}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold">x {item.quantity}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-gray-500 py-8">
+              Combo này hiện chưa có sản phẩm nào.
+            </p>
+          )}
         </div>
       </div>
     </>

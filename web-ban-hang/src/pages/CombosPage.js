@@ -16,7 +16,7 @@ import {
 
 export const ComboCard = ({ combo }) => {
   // Export component này
-  const { user, addToCart } = useAppContext();
+  const { user } = useAppContext();
 
   const handleAddComboToCart = async () => {
     if (!user) {
@@ -29,17 +29,29 @@ export const ComboCard = ({ combo }) => {
     combo.products.forEach((item) => {
       // Sửa lỗi: Cần tham chiếu đến document của sản phẩm trong giỏ hàng,
       // không phải collection 'cart'.
-      // Đường dẫn đúng là 'users/{uid}/cart/{variantId}'
-      const cartItemRef = doc(db, "users", user.uid, "cart", item.variantId);
-      batch.set(
-        cartItemRef,
-        {
-          quantity: increment(item.quantity),
-          addedAt: serverTimestamp(),
-          productId: item.productId, // Lưu thêm productId để dễ truy vấn
-        },
-        { merge: true }
-      );
+      // Đường dẫn đúng là 'users/{uid}/cart/{variantId}' - Đảm bảo item.variantId tồn tại
+      // Sửa lỗi: Đảm bảo variantId là một chuỗi hợp lệ, không rỗng.
+      if (
+        item.productId &&
+        typeof item.variantId === "string" &&
+        item.variantId.trim() !== ""
+      ) {
+        const cartItemRef = doc(db, "users", user.uid, "cart", item.variantId); // Sửa lại đường dẫn
+        batch.set(
+          cartItemRef,
+          {
+            quantity: increment(item.quantity),
+            addedAt: serverTimestamp(),
+            productId: item.productId, // Lưu thêm productId để dễ truy vấn
+          },
+          { merge: true }
+        );
+      } else {
+        console.warn(
+          "Bỏ qua sản phẩm trong combo vì thiếu productId hoặc variantId:",
+          item
+        );
+      }
     });
 
     await batch.commit();
@@ -47,30 +59,35 @@ export const ComboCard = ({ combo }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
-      <img
-        src={combo.imageUrl || "https://placehold.co/600x400"}
-        alt={combo.name}
-        className="w-full h-48 object-cover"
-      />
-      <div className="p-4">
-        <h3 className="text-xl font-bold">{combo.name}</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 h-10 overflow-hidden">
-          {combo.description}
-        </p>
-        <div className="mt-4 flex justify-between items-center">
-          <p className="text-2xl font-bold text-green-600">
-            {formatCurrency(combo.totalPrice)}
+    <Link to={`/combo/${combo.id}`} className="block">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105 h-full flex flex-col">
+        <img
+          src={combo.imageUrl || "https://placehold.co/600x400"}
+          alt={combo.name}
+          className="w-full h-48 object-cover"
+        />
+        <div className="p-4 flex flex-col flex-grow">
+          <h3 className="text-xl font-bold">{combo.name}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 h-10 overflow-hidden flex-grow">
+            {combo.description}
           </p>
-          <button
-            onClick={handleAddComboToCart}
-            className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700"
-          >
-            Thêm vào giỏ
-          </button>
+          <div className="mt-4 flex justify-between items-center">
+            <p className="text-2xl font-bold text-green-600">
+              {formatCurrency(combo.totalPrice || 0)}
+            </p>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                handleAddComboToCart();
+              }}
+              className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 z-10"
+            >
+              Thêm vào giỏ
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
