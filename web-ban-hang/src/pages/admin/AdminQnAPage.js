@@ -189,7 +189,7 @@ const AdminQnAPage = () => {
       <div className="page-container">
         <h1 className="page-title">Quản lý Hỏi & Đáp</h1>
 
-        <div className="flex flex-wrap gap-4 items-center mb-6 border-b pb-4">
+        <div className="flex flex-wrap gap-4 items-center mb-6 border-b dark:border-gray-700 pb-4">
           <button
             onClick={() => setFilter("unanswered")}
             className={`px-4 py-2 rounded-md font-semibold ${
@@ -214,7 +214,7 @@ const AdminQnAPage = () => {
             <select
               value={selectedProductFilter}
               onChange={(e) => setSelectedProductFilter(e.target.value)}
-              className="w-full p-2 border rounded-md dark:bg-gray-900 dark:border-gray-600"
+              className="w-full p-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
             >
               <option value="all">-- Lọc theo sản phẩm --</option>
               {productsWithQuestions.map((p) => (
@@ -232,7 +232,7 @@ const AdminQnAPage = () => {
               placeholder="Tìm theo tên sản phẩm hoặc nội dung..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 pl-10 border rounded-md dark:bg-gray-900 dark:border-gray-600"
+              className="w-full p-2 pl-10 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
             />
             <Search
               size={20}
@@ -253,16 +253,16 @@ const AdminQnAPage = () => {
               <div key={q.id} className="page-section">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       Sản phẩm:{" "}
                       <Link
                         to={`/product/${q.productId}`}
-                        className="text-blue-500 hover:underline"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         {q.productName}
                       </Link>
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       Người hỏi: {q.userName}
                     </p>
                   </div>
@@ -275,7 +275,7 @@ const AdminQnAPage = () => {
                 <p className="my-3 text-lg font-medium flex items-start">
                   <MessageCircle
                     size={20}
-                    className="mr-2 mt-1 text-gray-500 flex-shrink-0"
+                    className="mr-2 mt-1 text-gray-500 dark:text-gray-400 flex-shrink-0"
                   />{" "}
                   {q.questionText}
                 </p>
@@ -293,7 +293,7 @@ const AdminQnAPage = () => {
                       value={replyText[q.id] || ""}
                       onChange={(e) => handleReplyChange(q.id, e.target.value)}
                       placeholder="Viết câu trả lời của bạn..."
-                      className="w-full p-2 border rounded-md dark:bg-gray-900 dark:border-gray-600"
+                      className="w-full p-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
                       rows="2"
                     />
                     <button
