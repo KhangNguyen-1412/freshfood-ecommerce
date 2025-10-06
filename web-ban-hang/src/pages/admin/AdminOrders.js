@@ -41,38 +41,46 @@ const AdminOrders = () => {
   const [returnQuantities, setReturnQuantities] = useState({});
   const [displayedOrders, setDisplayedOrders] = useState([]);
   const { createNotification } = useAppContext();
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const invoiceRef = useRef();
 
   const handlePrint = useReactToPrint({
     content: () => invoiceRef.current,
     documentTitle: `HoaDon_${selectedOrder?.id.substring(0, 8) || ""}`,
-    onAfterPrint: () => toast.info("Đã in hóa đơn xong."),
+    onAfterPrint: () => toast.info("Đã hoàn tất quá trình in hóa đơn."),
   });
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setOrders(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setOrders(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Lỗi khi tải đơn hàng:", error);
+        toast.error("Không thể tải danh sách đơn hàng.");
+        setLoading(false);
+      }
+    );
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
+  const filteredAndSortedOrders = useMemo(() => {
     let tempOrders = [...orders];
 
-    // Lọc theo trạng thái
     if (statusFilter !== "all") {
       tempOrders = tempOrders.filter((o) => o.status === statusFilter);
     }
 
-    // Lọc theo từ khóa tìm kiếm
     if (searchTerm.trim() !== "") {
       const lowercasedTerm = searchTerm.toLowerCase();
       tempOrders = tempOrders.filter(
         (o) =>
           o.id?.toLowerCase().includes(lowercasedTerm) ||
-          o.shippingInfo?.name?.toLowerCase().includes(lowercasedTerm)
+          o.shippingInfo?.name?.toLowerCase().includes(lowercasedTerm) ||
+          o.shippingInfo?.phone?.includes(lowercasedTerm)
       );
     }
 
@@ -101,9 +109,13 @@ const AdminOrders = () => {
       default:
         break;
     }
-    setDisplayedOrders(sortedOrders);
-    setCurrentPage(1); // Reset về trang đầu khi sắp xếp
-  }, [sortOption, orders, statusFilter, searchTerm]);
+    return sortedOrders;
+  }, [orders, statusFilter, searchTerm, sortOption]);
+
+  useEffect(() => {
+    setDisplayedOrders(filteredAndSortedOrders);
+    setCurrentPage(1);
+  }, [filteredAndSortedOrders]);
 
   const handleStatusChange = async (orderId, newStatus, orderData) => {
     const orderRef = doc(db, "orders", orderId);
@@ -113,8 +125,16 @@ const AdminOrders = () => {
       // 1. Cập nhật trạng thái đơn hàng
       batch.update(orderRef, { status: newStatus });
 
+      const pointsEarned = Math.floor(orderData.totalAmount / 1000);
+      const userRef = orderData.userId
+        ? doc(db, "users", orderData.userId)
+        : null;
+      const historyRef = userRef
+        ? doc(collection(userRef, "pointsHistory"))
+        : null;
+
       // 2. Nếu trạng thái là "Hoàn thành", thực hiện các tác vụ liên quan
-      if (newStatus === "Hoàn thành" && orderData) {
+      if (newStatus === "Hoàn thành" && orderData.status !== "Hoàn thành") {
         // 2a. Trừ tồn kho sản phẩm
         if (orderData.items && orderData.branchId) {
           orderData.items.forEach((item) => {
@@ -133,11 +153,8 @@ const AdminOrders = () => {
         }
 
         // 2b. Cộng điểm tích lũy cho khách hàng
-        const pointsEarned = Math.floor(orderData.totalAmount / 1000);
-        if (pointsEarned > 0 && orderData.userId) {
-          const userRef = doc(db, "users", orderData.userId);
-          const historyRef = doc(collection(userRef, "pointsHistory"));
-          batch.update(userRef, { loyaltyPoints: increment(pointsEarned) });
+        if (pointsEarned > 0 && userRef && historyRef) {
+          batch.update(userRef, { loyaltyPoints: increment(pointsEarned) }); // Sử dụng increment
           batch.set(historyRef, {
             pointsChanged: pointsEarned,
             reason: `Mua hàng từ đơn #${orderId.substring(0, 8)}`,
@@ -146,8 +163,8 @@ const AdminOrders = () => {
           });
           toast.info(`Đã cộng ${pointsEarned} điểm cho khách hàng!`);
         }
-      } else if (newStatus === "Đã hủy" && orderData?.status === "Hoàn thành") {
-        // 3. Nếu đơn hàng bị HỦY từ trạng thái HOÀN THÀNH, hoàn lại tồn kho
+      } else if (newStatus === "Đã hủy" && orderData.status === "Hoàn thành") {
+        // 3. Nếu đơn hàng bị HỦY từ trạng thái HOÀN THÀNH
         if (orderData.items && orderData.branchId) {
           orderData.items.forEach((item) => {
             const inventoryRef = doc(
@@ -160,9 +177,20 @@ const AdminOrders = () => {
               orderData.branchId
             );
             // Hoàn lại số lượng bằng cách cộng
-            batch.update(inventoryRef, { stock: increment(item.quantity) });
+            batch.update(inventoryRef, { stock: increment(item.quantity) }); // Sử dụng increment
           });
           toast.info("Đã hoàn lại tồn kho cho các sản phẩm trong đơn hàng.");
+        }
+        // 3b. Trừ điểm tích lũy đã cộng
+        if (pointsEarned > 0 && userRef && historyRef) {
+          batch.update(userRef, { loyaltyPoints: increment(-pointsEarned) });
+          batch.set(historyRef, {
+            pointsChanged: -pointsEarned,
+            reason: `Hủy đơn hàng #${orderId.substring(0, 8)}`,
+            orderId: orderId,
+            createdAt: serverTimestamp(),
+          });
+          toast.info(`Đã trừ ${pointsEarned} điểm của khách hàng.`);
         }
       }
 
@@ -261,7 +289,7 @@ const AdminOrders = () => {
       await batch.commit();
       toast.success("Hoàn trả một phần đơn hàng thành công!");
       setShowRefundModal(false);
-      setSelectedOrder(null); // Đóng modal chi tiết để dữ liệu được làm mới
+      setIsDetailModalOpen(false); // Đóng modal chi tiết để dữ liệu được làm mới
     } catch (error) {
       console.error("Lỗi khi hoàn trả:", error);
       toast.error("Đã có lỗi xảy ra khi hoàn trả.");
@@ -336,10 +364,10 @@ const AdminOrders = () => {
         <div className="relative flex-grow">
           <input
             type="text"
-            placeholder="Tìm theo tên khách hàng hoặc mã đơn hàng..."
+            placeholder="Tìm theo tên, SĐT khách hàng hoặc mã đơn hàng..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full p-2 pl-10 border rounded-md text-sm dark:bg-gray-700"
+            className="w-full p-2 pl-10 border rounded-md text-sm dark:bg-gray-700 dark:border-gray-600"
           />
           <Search
             size={18}
@@ -403,7 +431,10 @@ const AdminOrders = () => {
               <tr
                 key={o.id}
                 className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                onClick={() => setSelectedOrder(o)}
+                onClick={() => {
+                  setSelectedOrder(o);
+                  setIsDetailModalOpen(true);
+                }}
               >
                 <td className="p-2 font-mono text-sm">
                   {o.id.substring(0, 8)}
@@ -451,14 +482,19 @@ const AdminOrders = () => {
           </button>
         </div>
       )}
-      {selectedOrder && (
+      {isDetailModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-3">
               <h2 className="text-2xl font-bold">
                 Chi tiết Đơn hàng #{selectedOrder.id.substring(0, 8)}
               </h2>
-              <button onClick={() => setSelectedOrder(null)}>
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  setSelectedOrder(null);
+                }}
+              >
                 <X size={24} />
               </button>
             </div>
@@ -532,7 +568,10 @@ const AdminOrders = () => {
             </div>
             <div className="mt-6 flex justify-end gap-4 border-t dark:border-gray-700 pt-4">
               <button
-                onClick={() => setSelectedOrder(null)}
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  setSelectedOrder(null);
+                }}
                 className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-md"
               >
                 Đóng

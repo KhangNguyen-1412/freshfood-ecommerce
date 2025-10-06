@@ -15,7 +15,7 @@ import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 
 import Spinner from "../../components/common/Spinner";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import "../../styles/admin.css";
 
 const BrandExcelUploadModal = ({ onCancel, onUploadSuccess }) => {
@@ -115,6 +115,7 @@ const AdminBrandsPage = () => {
     logoUrl: "",
   });
   const [showExcelModal, setShowExcelModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const q = query(collection(db, "brands"), orderBy("brandName"));
@@ -168,6 +169,13 @@ const AdminBrandsPage = () => {
 
   if (loading) return <Spinner />;
 
+  // Logic phân trang
+  const BRANDS_PER_PAGE = 10;
+  const totalPages = Math.ceil(brands.length / BRANDS_PER_PAGE);
+  const paginatedBrands = brands.slice(
+    (currentPage - 1) * BRANDS_PER_PAGE,
+    currentPage * BRANDS_PER_PAGE
+  );
   return (
     <div>
       <div className="admin-page-header">
@@ -256,7 +264,7 @@ const AdminBrandsPage = () => {
             </tr>
           </thead>
           <tbody>
-            {brands.map((brand) => (
+            {paginatedBrands.map((brand) => (
               <tr
                 key={brand.id}
                 className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -289,6 +297,27 @@ const AdminBrandsPage = () => {
           </tbody>
         </table>
       </div>
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center mt-6 space-x-4">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          >
+            <ChevronLeft size={16} className="mr-1" /> Trang trước
+          </button>
+          <span className="font-semibold text-gray-700 dark:text-gray-300">
+            Trang {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-green-600 text-white rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
+          >
+            Trang sau <ChevronRight size={16} className="ml-1" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
