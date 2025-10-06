@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-
 import {
   getDoc,
   collection,
@@ -61,12 +60,12 @@ const AdminProducts = () => {
   });
 
   const PRODUCTS_PER_PAGE = 10;
-  // Dùng trực tiếp userPermissions?.isAdmin để kiểm tra quyền
-  const canWrite = userPermissions?.isAdmin;
+  // Cho phép admin hoặc người có quyền 'products' thực hiện thao tác ghi
+  const canWrite = userPermissions?.isAdmin || userPermissions?.products;
 
   // Hàm kiểm tra quyền ghi chung
   const checkWritePermission = () => {
-    if (!userPermissions?.isAdmin) {
+    if (!canWrite) {
       toast.error("Bạn không có quyền thực hiện thao tác này.");
       return false;
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   collectionGroup,
   collection,
@@ -41,7 +41,7 @@ const AdminQnAPage = () => {
 
   const QUESTIONS_PER_PAGE = 10;
 
-  const fetchAllQuestions = React.useCallback(async () => {
+  const fetchAllQuestions = useCallback(async () => {
     setLoading(true);
     try {
       // 1. Lấy tất cả các câu hỏi bằng collectionGroup

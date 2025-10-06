@@ -1,5 +1,4 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   collection,
   query,
@@ -23,7 +22,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import "../../styles/admin.css";
 
 const AdminDashboard = () => {
@@ -36,8 +35,12 @@ const AdminDashboard = () => {
   });
   const [salesChartData, setSalesChartData] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [allPeriodOrders, setAllPeriodOrders] = useState([]); // Lưu tất cả đơn hàng
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [recentOrdersPage, setRecentOrdersPage] = useState(1);
+
+  const RECENT_ORDERS_PER_PAGE = 5;
 
   const getStartDate = (p) => {
     const now = new Date();
@@ -98,12 +101,33 @@ const AdminDashboard = () => {
         lowStockMap[productId].stock += stock;
       });
 
-      // Lấy tên sản phẩm cho các sản phẩm có tồn kho thấp
-      for (const productId in lowStockMap) {
-        const productDoc = await getDoc(doc(db, "products", productId));
-        if (productDoc.exists())
-          lowStockMap[productId].name = productDoc.data().name;
+      // TỐI ƯU HÓA: Thay thế vòng lặp getDoc() bằng truy vấn 'in'
+      const productIds = Object.keys(lowStockMap);
+      if (productIds.length > 0) {
+        const productsMap = new Map();
+        const CHUNK_SIZE = 30; // Giới hạn của truy vấn 'in' trong Firestore
+
+        // Chia productIds thành các chunk nhỏ hơn 30 để truy vấn
+        for (let i = 0; i < productIds.length; i += CHUNK_SIZE) {
+          const chunk = productIds.slice(i, i + CHUNK_SIZE);
+          const productsQuery = query(
+            collection(db, "products"),
+            where("__name__", "in", chunk)
+          );
+          const productsSnapshot = await getDocs(productsQuery);
+          productsSnapshot.forEach((productDoc) => {
+            productsMap.set(productDoc.id, productDoc.data());
+          });
+        }
+
+        // Cập nhật tên sản phẩm vào lowStockMap
+        for (const productId in lowStockMap) {
+          if (productsMap.has(productId)) {
+            lowStockMap[productId].name = productsMap.get(productId).name;
+          }
+        }
       }
+
       setLowStockProducts(
         Object.values(lowStockMap).filter((p) => p.stock < 10)
       );
@@ -153,14 +177,26 @@ const AdminDashboard = () => {
       };
 
       setSalesChartData(processChartData());
-      setRecentOrders(ordersData.slice(0, 5));
+      setAllPeriodOrders(ordersData); // Lưu tất cả đơn hàng vào state
+      setRecentOrdersPage(1); // Reset về trang 1 mỗi khi đổi bộ lọc
       setLoading(false);
     };
 
     fetchData();
   }, [period]);
 
+  // useEffect riêng cho việc phân trang đơn hàng
+  useEffect(() => {
+    const startIndex = (recentOrdersPage - 1) * RECENT_ORDERS_PER_PAGE;
+    const endIndex = startIndex + RECENT_ORDERS_PER_PAGE;
+    setRecentOrders(allPeriodOrders.slice(startIndex, endIndex));
+  }, [allPeriodOrders, recentOrdersPage]);
+
   if (loading) return <Spinner />;
+
+  const totalOrderPages = Math.ceil(
+    allPeriodOrders.length / RECENT_ORDERS_PER_PAGE
+  );
 
   return (
     <div>
@@ -269,6 +305,30 @@ const AdminDashboard = () => {
               </div>
             ))}
           </div>
+          {/* THÊM NÚT PHÂN TRANG */}
+          {totalOrderPages > 1 && (
+            <div className="flex justify-between items-center mt-4">
+              <button
+                onClick={() => setRecentOrdersPage((p) => Math.max(1, p - 1))}
+                disabled={recentOrdersPage === 1}
+                className="p-1 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm bg-gray-200 dark:bg-gray-700"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-xs font-semibold text-gray-500">
+                Trang {recentOrdersPage} / {totalOrderPages}
+              </span>
+              <button
+                onClick={() =>
+                  setRecentOrdersPage((p) => Math.min(totalOrderPages, p + 1))
+                }
+                disabled={recentOrdersPage === totalOrderPages}
+                className="p-1 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm bg-gray-200 dark:bg-gray-700"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
