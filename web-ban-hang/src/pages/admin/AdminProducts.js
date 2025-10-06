@@ -61,13 +61,19 @@ const AdminProducts = () => {
   });
 
   const PRODUCTS_PER_PAGE = 10;
-  // Thêm biến này để kiểm tra quyền ghi
+  // Dùng trực tiếp userPermissions?.isAdmin để kiểm tra quyền
   const canWrite = userPermissions?.isAdmin;
 
-  // Tách riêng useEffect để kiểm tra quyền
+  // Hàm kiểm tra quyền ghi chung
+  const checkWritePermission = () => {
+    if (!userPermissions?.isAdmin) {
+      toast.error("Bạn không có quyền thực hiện thao tác này.");
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
-    // Nếu đã có thông tin quyền và người dùng không phải admin cũng không có quyền xem sản phẩm
-    // LƯU Ý: Vẫn cho phép staff (userPermissions.products) truy cập trang, nhưng các nút sửa/xóa sẽ bị ẩn.
     if (
       userPermissions &&
       !userPermissions.isAdmin &&
@@ -81,11 +87,11 @@ const AdminProducts = () => {
   useEffect(() => {
     setLoading(true);
 
-    // Query lấy sản phẩm
     const unsubProducts = onSnapshot(
       query(collection(db, "products"), orderBy("createdAt", "desc")),
       async (snapshot) => {
-        const productsWithInventory = await Promise.all(
+        // SỬA LỖI: Lấy tồn kho cho từng sản phẩm thay vì dùng collectionGroup
+        const productsData = await Promise.all(
           snapshot.docs.map(async (productDoc) => {
             const productData = {
               id: productDoc.id,
@@ -93,45 +99,34 @@ const AdminProducts = () => {
               inventory: {},
             };
 
+            // Lấy các biến thể của sản phẩm
             const variantsQuery = query(
               collection(db, "products", productDoc.id, "variants")
             );
             const variantsSnapshot = await getDocs(variantsQuery);
 
+            // Nếu có biến thể, tính tổng tồn kho từ các biến thể
             if (!variantsSnapshot.empty) {
-              // Nếu sản phẩm CÓ biến thể, tính tổng tồn kho từ các biến thể
-              const inventoryPromises = variantsSnapshot.docs.map(
-                async (variantDoc) => {
-                  const inventorySnapshot = await getDocs(
-                    collection(variantDoc.ref, "inventory")
-                  );
-                  inventorySnapshot.forEach((invDoc) => {
-                    productData.inventory[invDoc.id] =
-                      (productData.inventory[invDoc.id] || 0) +
-                      invDoc.data().stock;
-                  });
-                }
-              );
-              await Promise.all(inventoryPromises);
-            } else {
-              // Nếu sản phẩm KHÔNG có biến thể, lấy tồn kho từ chính sản phẩm đó
-              // Đọc sub-collection 'inventory' của sản phẩm cha
-              const inventorySnapshot = await getDocs(
-                collection(productDoc.ref, "inventory")
-              );
-              if (!inventorySnapshot.empty) {
+              for (const variantDoc of variantsSnapshot.docs) {
+                const inventorySnapshot = await getDocs(
+                  collection(variantDoc.ref, "inventory")
+                );
                 inventorySnapshot.forEach((invDoc) => {
-                  productData.inventory[invDoc.id] = invDoc.data().stock || 0;
+                  const stock = invDoc.data().stock || 0;
+                  productData.inventory[invDoc.id] =
+                    (productData.inventory[invDoc.id] || 0) + stock;
                 });
-              } else {
-                // Trường hợp cũ, nếu sản phẩm chưa có sub-collection inventory
-                productData.inventory["default"] = productData.stock || 0;
               }
+            } else {
+              // Nếu không có biến thể, lấy tồn kho từ chính sản phẩm đó (nếu có)
+              // Đây là trường hợp dự phòng, cấu trúc mới nên có tồn kho trong biến thể
+              productData.inventory["default"] = productData.stock || 0;
             }
+
             return productData;
           })
         );
-        setProducts(productsWithInventory);
+        setProducts(productsData);
         setLoading(false);
       }
     );
@@ -186,11 +181,7 @@ const AdminProducts = () => {
   }, []);
 
   const handleToggleSale = async (productId, currentStatus, product) => {
-    // Kiểm tra quyền trước khi thực hiện
-    if (!canWrite) {
-      toast.error("Bạn không có quyền thực hiện thao tác này.");
-      return;
-    }
+    if (!checkWritePermission()) return;
     const productRef = doc(db, "products", productId);
     try {
       const updateData = { onSale: !currentStatus };
@@ -205,11 +196,7 @@ const AdminProducts = () => {
   };
 
   const handleSalePriceChange = async (productId, newPrice) => {
-    // Kiểm tra quyền trước khi thực hiện
-    if (!canWrite) {
-      toast.error("Bạn không có quyền thực hiện thao tác này.");
-      return;
-    }
+    if (!checkWritePermission()) return;
     const priceValue = Number(newPrice);
     if (isNaN(priceValue) || priceValue < 0) {
       toast.error("Vui lòng nhập một mức giá hợp lệ.");
@@ -225,15 +212,10 @@ const AdminProducts = () => {
   };
 
   const handleSaveProduct = async (productData) => {
-    // Kiểm tra quyền trước khi thực hiện
-    if (!canWrite) {
-      toast.error("Bạn không có quyền thực hiện thao tác này.");
-      return;
-    }
+    if (!checkWritePermission()) return;
     const { mainData, variants, variantsToDelete } = productData;
     const batch = writeBatch(db);
 
-    // --- TỐI ƯU HÓA: Thêm dữ liệu của biến thể mặc định vào sản phẩm cha ---
     if (variants && variants.length > 0 && mainData.defaultVariantId) {
       const defaultVariant = variants.find(
         (v) => v.id === mainData.defaultVariantId
@@ -242,32 +224,26 @@ const AdminProducts = () => {
         mainData.defaultVariantPrice = defaultVariant.price || 0;
         mainData.defaultVariantSalePrice = defaultVariant.salePrice || 0;
         mainData.defaultVariantOnSale = defaultVariant.onSale || false;
-        // Gán giá chính của sản phẩm bằng giá của biến thể mặc định để sắp xếp
         mainData.price = defaultVariant.price || 0;
         mainData.salePrice = defaultVariant.salePrice || 0;
         mainData.onSale = defaultVariant.onSale || false;
       }
     }
-    // --- KẾT THÚC TỐI ƯU HÓA ---
 
     try {
       if (editingProduct) {
         const productRef = doc(db, "products", editingProduct.id);
         batch.update(productRef, mainData);
 
-        // Xóa các biến thể đã được đánh dấu
         if (variantsToDelete && variantsToDelete.length > 0) {
           variantsToDelete.forEach((variantId) => {
             batch.delete(doc(productRef, "variants", variantId));
           });
         }
 
-        // Cập nhật hoặc thêm mới các biến thể
         for (const variant of variants) {
           const { id, ...variantData } = variant;
           const inventoryData = {};
-
-          // Lọc ra các trường tồn kho
           Object.keys(variantData).forEach((key) => {
             if (key.startsWith("inventory_")) {
               inventoryData[key.replace("inventory_", "")] = variantData[key];
@@ -275,12 +251,10 @@ const AdminProducts = () => {
             }
           });
 
-          // Nếu ID bắt đầu bằng 'new_', tạo doc mới, ngược lại dùng ID cũ
           const variantRef = variant.id.startsWith("new_")
             ? doc(collection(productRef, "variants"))
             : doc(productRef, "variants", variant.id);
           batch.set(variantRef, variantData, { merge: true });
-          // Lưu dữ liệu tồn kho vào sub-collection của variant
           Object.entries(inventoryData).forEach(([branchId, stock]) => {
             const invRef = doc(variantRef, "inventory", branchId);
             batch.set(invRef, { stock: Number(stock) || 0 });
@@ -292,11 +266,9 @@ const AdminProducts = () => {
           ...mainData,
           purchaseCount: 0,
           createdAt: serverTimestamp(),
-          // Nếu là sản phẩm đơn giản, không có defaultVariantId
           defaultVariantId:
             variants && variants.length > 0 ? mainData.defaultVariantId : null,
         });
-        // Thêm các biến thể vào sub-collection
         for (const variant of variants) {
           const { id, ...variantData } = variant;
           const inventoryData = {};
@@ -332,11 +304,7 @@ const AdminProducts = () => {
   };
 
   const handleDelete = async (productId) => {
-    // Kiểm tra quyền trước khi thực hiện
-    if (!canWrite) {
-      toast.error("Bạn không có quyền thực hiện thao tác này.");
-      return;
-    }
+    if (!checkWritePermission()) return;
     if (window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) {
       await deleteDoc(doc(db, "products", productId));
       toast.success("Xóa sản phẩm thành công!");
@@ -364,11 +332,7 @@ const AdminProducts = () => {
   };
 
   const handleBulkAssignBrand = async (brandId) => {
-    // Kiểm tra quyền trước khi thực hiện
-    if (!canWrite) {
-      toast.error("Bạn không có quyền thực hiện thao tác này.");
-      return;
-    }
+    if (!checkWritePermission()) return;
     if (selectedProducts.size === 0 || !brandId) {
       toast.warn("Vui lòng chọn ít nhất một sản phẩm và một nhãn hiệu.");
       return;
@@ -418,7 +382,6 @@ const AdminProducts = () => {
     return brandMatch && categoryMatch && searchMatch;
   });
 
-  // Logic sắp xếp
   const sortedProducts = React.useMemo(() => {
     let sortableItems = [...filteredProducts];
     if (sortConfig.key !== null) {
@@ -426,7 +389,6 @@ const AdminProducts = () => {
         let aValue = a[sortConfig.key];
         let bValue = b[sortConfig.key];
 
-        // Xử lý giá của biến thể mặc định
         if (sortConfig.key === "price") {
           aValue = a.defaultVariantPrice ?? a.price;
           bValue = b.defaultVariantPrice ?? b.price;
@@ -512,7 +474,6 @@ const AdminProducts = () => {
       <div className="admin-page-header">
         <h1 className="admin-page-title">Quản lý Sản phẩm</h1>
         <div className="flex gap-2">
-          {/* Ẩn nút nếu không có quyền ghi */}
           {canWrite && (
             <>
               <button
@@ -735,7 +696,6 @@ const AdminProducts = () => {
                       disabled={!canWrite}
                     />
                   </td>
-                  {/* Ẩn cột "Hành động" nếu không có quyền ghi */}
                   {canWrite && (
                     <td className="p-2 flex space-x-2">
                       <button

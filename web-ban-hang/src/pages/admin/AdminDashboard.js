@@ -1,6 +1,15 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  doc,
+  getDoc,
+  collectionGroup,
+} from "firebase/firestore";
 import { db } from "../../firebase/config";
 import Spinner from "../../components/common/Spinner";
 import { formatCurrency } from "../../utils/formatCurrency";
@@ -69,14 +78,34 @@ const AdminDashboard = () => {
       );
       const customersSnapshot = await getDocs(customersQuery);
 
+      // SỬA LỖI: Lấy tồn kho từ collectionGroup 'inventory' và tổng hợp lại
       const lowStockQuery = query(
-        collection(db, "products"),
-        where("stock", "<", 10),
-        orderBy("stock", "asc")
+        collectionGroup(db, "inventory"),
+        where("stock", "<", 10)
       );
-      const lowStockSnapshot = await getDocs(lowStockQuery);
+      const inventorySnapshot = await getDocs(lowStockQuery);
+      const lowStockMap = {};
+      inventorySnapshot.forEach((doc) => {
+        const productId = doc.ref.parent.parent.id; // Lấy ID sản phẩm cha
+        const stock = doc.data().stock;
+        if (!lowStockMap[productId]) {
+          lowStockMap[productId] = {
+            id: productId,
+            name: "Đang tải...",
+            stock: 0,
+          };
+        }
+        lowStockMap[productId].stock += stock;
+      });
+
+      // Lấy tên sản phẩm cho các sản phẩm có tồn kho thấp
+      for (const productId in lowStockMap) {
+        const productDoc = await getDoc(doc(db, "products", productId));
+        if (productDoc.exists())
+          lowStockMap[productId].name = productDoc.data().name;
+      }
       setLowStockProducts(
-        lowStockSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        Object.values(lowStockMap).filter((p) => p.stock < 10)
       );
 
       const completedOrders = ordersData.filter(

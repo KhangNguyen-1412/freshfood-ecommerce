@@ -1,20 +1,19 @@
 // src/App.js
 
 import React from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { AppProvider, useAppContext } from "./context/AppContext";
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { useAppContext } from "./context/AppContext";
+import { Routes, Route } from "react-router-dom";
 
 // Import Layouts
 // import Header from "./components/layout/Header";
 // import Footer from "./components/layout/Footer";
-import UserLayout from "./components/layout/UserLayout"; // Import UserLayout mới
+import UserLayout from "./components/layout/UserLayout";
 import AdminLayout from "./components/layout/AdminLayout";
 
 // Import common components
 import Spinner from "./components/common/Spinner";
 import AdminRoute from "./components/common/AdminRoute";
-import BranchSelector from "./pages/BranchSelector";
+// import BranchSelector from "./pages/BranchSelector";
 
 // Import Customer Pages
 import HomePage from "./pages/HomePage";
@@ -128,11 +127,7 @@ const AppRoutes = () => {
 
 // Component App chính, bao bọc mọi thứ trong AppProvider
 function App() {
-  return (
-    <AppProvider>
-      <AppRoutes />
-    </AppProvider>
-  );
+  return <AppRoutes />;
 }
 
 export default App;

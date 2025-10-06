@@ -4,7 +4,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase/config";
@@ -47,8 +47,11 @@ const AuthModal = ({ onClose, onSwitchToForgotPassword }) => {
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      onClose();
+      // Chuyển sang signInWithRedirect để có trải nghiệm tốt hơn trên di động
+      // và tránh các vấn đề về chính sách cross-origin.
+      // Firebase sẽ tự động xử lý kết quả sau khi người dùng được chuyển hướng trở lại.
+      await signInWithRedirect(auth, provider);
+      // không cần gọi onClose() vì trang sẽ được tải lại
     } catch (err) {
       setError(err.message);
       console.error("Lỗi đăng nhập Google:", err);

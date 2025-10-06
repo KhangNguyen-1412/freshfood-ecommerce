@@ -51,36 +51,6 @@ export const AppProvider = ({ children }) => {
     () => JSON.parse(localStorage.getItem("compareList")) || []
   );
 
-  // Effect để lấy danh sách chi nhánh và khôi phục lựa chọn
-  useEffect(() => {
-    const fetchBranchesAndRestoreSelection = async () => {
-      try {
-        const q = query(collection(db, "branches"), orderBy("branchName"));
-        const snapshot = await getDocs(q);
-        const branchesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setBranches(branchesData);
-
-        const savedBranchId = localStorage.getItem("selectedBranchId");
-        if (savedBranchId) {
-          const savedBranch = branchesData.find((b) => b.id === savedBranchId);
-          if (savedBranch) {
-            setSelectedBranch(savedBranch);
-            const savedDistrict = localStorage.getItem("selectedDistrict");
-            if (savedDistrict) {
-              setSelectedDistrict(savedDistrict);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Lỗi khi tải danh sách chi nhánh:", error);
-      }
-    };
-    fetchBranchesAndRestoreSelection();
-  }, []);
-
   const handleSelectBranch = (branch) => {
     setSelectedBranch(branch);
     localStorage.setItem("selectedBranchId", branch.id);
@@ -216,16 +186,51 @@ export const AppProvider = ({ children }) => {
       }
     });
 
-    const qBrands = query(collection(db, "brands"), orderBy("brandName"));
-    const unsubscribeBrands = onSnapshot(qBrands, (snapshot) => {
-      setBrands(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-
     return () => {
       unsubscribeAuth();
       unsubscribeUser();
-      unsubscribeBrands();
     };
+  }, []);
+
+  // TÁCH RIÊNG: Effect để lấy dữ liệu công khai (branches, brands)
+  useEffect(() => {
+    // Lấy danh sách chi nhánh và khôi phục lựa chọn
+    const fetchBranchesAndRestoreSelection = async () => {
+      try {
+        const q = query(collection(db, "branches"), orderBy("branchName"));
+        const snapshot = await getDocs(q);
+        const branchesData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setBranches(branchesData);
+
+        const savedBranchId = localStorage.getItem("selectedBranchId");
+        if (savedBranchId) {
+          const savedBranch = branchesData.find((b) => b.id === savedBranchId);
+          if (savedBranch) {
+            setSelectedBranch(savedBranch);
+            const savedDistrict = localStorage.getItem("selectedDistrict");
+            if (savedDistrict) setSelectedDistrict(savedDistrict);
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải danh sách chi nhánh:", error);
+      }
+    };
+
+    const qBrands = query(collection(db, "brands"), orderBy("brandName"));
+    const unsubscribeBrands = onSnapshot(
+      qBrands,
+      (snapshot) => {
+        setBrands(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      },
+      (error) => console.error("Lỗi khi tải danh sách thương hiệu:", error)
+    );
+
+    fetchBranchesAndRestoreSelection();
+
+    return () => unsubscribeBrands();
   }, []);
 
   // Effect quản lý giỏ hàng
