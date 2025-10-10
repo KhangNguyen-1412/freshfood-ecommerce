@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   collection,
@@ -20,9 +20,13 @@ import Spinner from "../components/common/Spinner";
 import AddressForm from "../components/profile/AddressForm";
 import PromoCodeModal from "../components/checkout/PromoCodeModal";
 import { ArrowLeft, PlusCircle, Tag } from "lucide-react";
+import PaymentMethods from "../components/checkout/PaymentMethods";
+import AddressSelection from "../components/checkout/AddressSelection";
+import CartSummary from "../components/checkout/CartSummary";
 import "../styles/pages.css";
 import SEO from "../components/common/SEO";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 // Giả sử bạn có hàm gọi API backend để tạo URL thanh toán VNPay
 // const createVNPayPaymentAPI = async (orderInfo) => { ... };
@@ -42,7 +46,6 @@ const CheckoutPage = () => {
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
-  const [showAddressForm, setShowAddressForm] = useState(false);
   const [shippingInfo, setShippingInfo] = useState({
     name: "",
     phone: "",
@@ -50,7 +53,7 @@ const CheckoutPage = () => {
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("COD");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [availablePromos, setAvailablePromos] = useState([]);
+  const [allActivePromos, setAllActivePromos] = useState([]); // State mới để lưu tất cả promo đang hoạt động
   const [appliedPromos, setAppliedPromos] = useState([]);
   const [showPromoModal, setShowPromoModal] = useState(false);
 
@@ -69,23 +72,28 @@ const CheckoutPage = () => {
   }, 0);
   const finalTotal = subtotal > totalDiscount ? subtotal - totalDiscount : 0;
 
+  // Tối ưu hóa 1: Chỉ fetch khuyến mãi một lần khi component mount
   useEffect(() => {
     const q = query(
       collection(db, "promotions"),
       where("expiresAt", ">", new Date())
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allActivePromos = snapshot.docs.map((doc) => ({
+      const promosData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      const eligiblePromos = allActivePromos.filter(
-        (promo) => subtotal >= (promo.minimumPurchaseAmount || 0)
-      );
-      setAvailablePromos(eligiblePromos);
+      setAllActivePromos(promosData);
     });
     return () => unsubscribe();
-  }, [subtotal]);
+  }, []); // Mảng phụ thuộc rỗng để chỉ chạy một lần
+
+  // Sử dụng useMemo để tính toán lại danh sách promo hợp lệ khi subtotal thay đổi, không cần fetch lại
+  const availablePromos = useMemo(() => {
+    return allActivePromos.filter(
+      (promo) => subtotal >= (promo.minimumPurchaseAmount || 0)
+    );
+  }, [allActivePromos, subtotal]);
 
   useEffect(() => {
     if (!user) return;
@@ -101,7 +109,7 @@ const CheckoutPage = () => {
       }
     });
     return () => unsubscribe();
-  }, [user, selectedAddressId]);
+  }, [user]); // Tối ưu hóa 2: Bỏ selectedAddressId khỏi dependency array
 
   useEffect(() => {
     const selected = addresses.find((addr) => addr.id === selectedAddressId);
@@ -133,7 +141,6 @@ const CheckoutPage = () => {
       const newAddress = await addDoc(addressesCol, addressData);
       setSelectedAddressId(newAddress.id);
     }
-    setShowAddressForm(false);
   };
 
   // Hàm mới: Chỉ tạo đơn hàng với trạng thái chờ thanh toán
@@ -161,6 +168,31 @@ const CheckoutPage = () => {
       transaction.set(newOrderRef, orderData);
     });
     return newOrderRef.id; // Trả về ID của đơn hàng mới
+  };
+
+  // Xử lý khi thanh toán PayPal được phê duyệt
+  const onPayPalApprove = async (data, actions) => {
+    setIsProcessing(true);
+    try {
+      // `data.orderID` là ID giao dịch từ PayPal
+      const details = await actions.order.capture();
+      toast.success(
+        `Thanh toán thành công bởi ${details.payer.name.given_name}!`
+      );
+      // Tạo đơn hàng trong Firestore sau khi thanh toán thành công
+      // Truyền ID giao dịch của PayPal vào hàm tạo đơn hàng
+      await createOrderInFirestore(details.id);
+      navigate(
+        "/payment-success?orderId=" + details.id + "&paymentMethod=PayPal",
+        { replace: true }
+      );
+    } catch (error) {
+      console.error("Lỗi khi xử lý thanh toán PayPal:", error);
+      toast.error("Đã có lỗi xảy ra với thanh toán PayPal.");
+      navigate("/payment-cancel?reason=PayPalError", { replace: true });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const createOrderInFirestore = async (paymentIntentId = null) => {
@@ -237,6 +269,18 @@ const CheckoutPage = () => {
     await createOrderInFirestore();
     toast.success("Đặt hàng (COD) thành công!");
     navigate("/profile", { replace: true });
+  };
+
+  // Xử lý cho Chuyển khoản ngân hàng
+  const handleBankTransfer = async () => {
+    const orderId = await createPendingOrder();
+    toast.success(
+      `Đã tạo đơn hàng #${orderId.substring(
+        0,
+        8
+      )}. Vui lòng thực hiện chuyển khoản.`
+    );
+    navigate(`/payment-success?orderId=${orderId}&paymentMethod=BANK_TRANSFER`);
   };
 
   // Xử lý cho Stripe
@@ -336,11 +380,17 @@ const CheckoutPage = () => {
         case "COD":
           await handleCOD();
           break;
+        case "BANK_TRANSFER":
+          await handleBankTransfer();
+          break;
         case "STRIPE_CARD":
           await handleStripePayment();
           break;
         case "VNPAY": // Ví dụ thêm VNPay
           await handleVNPay();
+          break;
+        case "PAYPAL":
+          // For PayPal, the action is handled by the PayPalButtons component itself.
           break;
         default:
           throw new Error("Phương thức thanh toán không hợp lệ.");
@@ -378,154 +428,33 @@ const CheckoutPage = () => {
           <h1 className="text-3xl font-bold">Thanh toán</h1>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 page-section">
-            <h2 className="text-xl font-bold mb-4">Chọn địa chỉ giao hàng</h2>
-            <div className="space-y-3">
-              {addresses.map((addr) => (
-                <label
-                  key={addr.id}
-                  className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700"
-                >
-                  <input
-                    type="radio"
-                    name="address"
-                    value={addr.id}
-                    checked={selectedAddressId === addr.id}
-                    onChange={(e) => setSelectedAddressId(e.target.value)}
-                    className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
-                  />
-                  <div>
-                    <p className="font-semibold">
-                      {addr.name} - {addr.phone}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {addr.address}
-                    </p>
-                  </div>
-                </label>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowAddressForm(true)}
-              className="mt-4 flex items-center text-green-600 hover:underline"
-            >
-              <PlusCircle size={18} className="mr-1" /> Thêm địa chỉ mới
-            </button>
-            {showAddressForm && (
-              <AddressForm
-                onSave={handleSaveAddress}
-                onCancel={() => setShowAddressForm(false)}
-              />
-            )}
-
-            <h2 className="text-xl font-bold mt-8 mb-4">
-              Phương thức thanh toán
-            </h2>
-            <div className="space-y-2">
-              <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="COD"
-                  checked={selectedPaymentMethod === "COD"}
-                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                  className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
-                />
-                Thanh toán khi nhận hàng (COD)
-              </label>
-              <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="STRIPE_CARD"
-                  checked={selectedPaymentMethod === "STRIPE_CARD"}
-                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                  className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
-                />
-                Thanh toán qua thẻ (Visa, Mastercard)
-              </label>
-              {/* Ví dụ thêm phương thức VNPay */}
-              <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="VNPAY"
-                  checked={selectedPaymentMethod === "VNPAY"}
-                  onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                  className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500"
-                />
-                Thanh toán qua VNPay
-              </label>
-              {selectedPaymentMethod === "STRIPE_CARD" && (
-                <div className="p-4 border dark:border-gray-700 rounded-md mt-2 animate-fade-in">
-                  <CardElement
-                    options={{
-                      style: {
-                        base: {
-                          fontSize: "16px",
-                          color: theme === "dark" ? "#FFF" : "#424770",
-                          "::placeholder": { color: "#aab7c4" },
-                        },
-                        invalid: { color: "#9e2146" },
-                      },
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+          <div className="lg:col-span-2 page-section space-y-8">
+            <AddressSelection
+              addresses={addresses}
+              selectedAddressId={selectedAddressId}
+              onSelectAddress={setSelectedAddressId}
+              onSaveAddress={handleSaveAddress}
+            />
+            <PaymentMethods
+              selectedPaymentMethod={selectedPaymentMethod}
+              setSelectedPaymentMethod={setSelectedPaymentMethod}
+              isProcessing={isProcessing}
+              finalTotal={finalTotal}
+              onPayPalApprove={onPayPalApprove}
+              theme={theme}
+            />
           </div>
-          <div className="cart-summary">
-            <h2 className="cart-summary-title">Tóm tắt đơn hàng</h2>
-            <div className="mt-4">
-              <button
-                onClick={() => setShowPromoModal(true)}
-                className="w-full text-blue-600 font-semibold border-2 border-dashed dark:border-gray-600 p-2 rounded-md hover:bg-blue-50 dark:hover:bg-gray-700"
-              >
-                Chọn hoặc nhập mã khuyến mãi
-              </button>
-              {appliedPromos.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  <p className="font-semibold text-sm mb-2">Mã đã áp dụng:</p>
-                  {appliedPromos.map((promo) => (
-                    <div
-                      key={promo.id}
-                      className="flex justify-between items-center text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 p-2 rounded-md"
-                    >
-                      <span>
-                        <Tag size={14} className="inline mr-1" />
-                        {promo.code}
-                      </span>
-                      <button
-                        onClick={() => handleRemovePromoCode(promo.id)}
-                        className="font-bold hover:text-red-600"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex justify-between mt-4">
-              <span>Tạm tính</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex justify-between mt-2 text-red-500">
-              <span>Giảm giá</span>
-              <span>- {formatCurrency(totalDiscount)}</span>
-            </div>
-            <div className="flex justify-between font-bold text-lg mt-4 border-t dark:border-gray-700 pt-4">
-              <span>Tổng cộng</span>
-              <span>{formatCurrency(finalTotal)}</span>
-            </div>
-            <button
-              onClick={handlePlaceOrder}
-              disabled={isProcessing}
-              className="cart-checkout-button flex justify-center items-center"
-            >
-              {isProcessing ? <Spinner size="sm" /> : "Hoàn tất đơn hàng"}
-            </button>
-          </div>
+          <CartSummary
+            subtotal={subtotal}
+            totalDiscount={totalDiscount}
+            finalTotal={finalTotal}
+            appliedPromos={appliedPromos}
+            onShowPromoModal={() => setShowPromoModal(true)}
+            onRemovePromo={handleRemovePromoCode}
+            onPlaceOrder={handlePlaceOrder}
+            isProcessing={isProcessing}
+            selectedPaymentMethod={selectedPaymentMethod}
+          />
         </div>
       </div>
     </>

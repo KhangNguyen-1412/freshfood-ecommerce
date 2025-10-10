@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline' https:; frame-src https: blob:; connect-src 'self' http://localhost:3001 https: wss:; img-src 'self' data: https:;"
+    />
+    <meta
       name="description"
       content="Web site created using create-react-app"
     />
@@ -33,7 +37,9 @@
     <script type="text/javascript">
       var Tawk_API = Tawk_API || {},
         Tawk_LoadStart = new Date();
-      (function () {
+
+      // Hàm để tải script Tawk.to
+      function loadTawkTo() {
         var s1 = document.createElement("script"),
           s0 = document.getElementsByTagName("script")[0];
         s1.async = true;
@@ -41,7 +47,25 @@
         s1.charset = "UTF-8";
         s1.setAttribute("crossorigin", "*");
         s0.parentNode.insertBefore(s1, s0);
-      })();
+      }
+
+      // Chỉ tải script khi người dùng có tương tác đầu tiên (cuộn, di chuột,...)
+      // Điều này giúp ưu tiên tải nội dung chính của trang trước.
+      const events = ["scroll", "mousemove", "touchstart", "keydown"];
+      const loadTawkOnInteraction = () => {
+        loadTawkTo();
+        events.forEach((event) =>
+          window.removeEventListener(event, loadTawkOnInteraction, {
+            passive: true,
+          })
+        );
+      };
+      events.forEach((event) =>
+        window.addEventListener(event, loadTawkOnInteraction, {
+          passive: true,
+          once: true,
+        })
+      );
     </script>
     <!--End of Tawk.to Script-->
   </body>

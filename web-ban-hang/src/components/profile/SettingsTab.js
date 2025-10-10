@@ -75,6 +75,45 @@ const SettingsTab = ({ user, userData }) => {
               Thanh toán qua thẻ (Visa, Mastercard)
             </label>
           </div>
+          <div>
+            <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
+              <input
+                type="radio"
+                name="defaultPayment"
+                value="BANK_TRANSFER"
+                checked={userData?.defaultPaymentMethod === "BANK_TRANSFER"}
+                onChange={handlePaymentMethodChange}
+                className="mr-3"
+              />
+              Chuyển khoản ngân hàng
+            </label>
+          </div>
+          <div>
+            <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
+              <input
+                type="radio"
+                name="defaultPayment"
+                value="VNPAY"
+                checked={userData?.defaultPaymentMethod === "VNPAY"}
+                onChange={handlePaymentMethodChange}
+                className="mr-3"
+              />
+              Thanh toán qua VNPay
+            </label>
+          </div>
+          <div>
+            <label className="flex items-center p-3 border rounded-md cursor-pointer dark:border-gray-700">
+              <input
+                type="radio"
+                name="defaultPayment"
+                value="PAYPAL"
+                checked={userData?.defaultPaymentMethod === "PAYPAL"}
+                onChange={handlePaymentMethodChange}
+                className="mr-3"
+              />
+              Thanh toán qua PayPal
+            </label>
+          </div>
         </div>
       </div>
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-6 rounded-lg shadow-md">
