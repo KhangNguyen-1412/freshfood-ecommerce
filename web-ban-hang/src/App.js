@@ -31,7 +31,6 @@ import PaymentSuccessPage from "./pages/PaymentSuccessPage"; // Giả định b�
 import ComparePage from "./pages/ComparePage"; // Import trang so sánh
 import CombosPage from "./pages/CombosPage"; // Import trang combo
 import ComboDetailPage from "./pages/ComboDetailPage"; // Import trang chi tiết combo
-import PaymentCancelPage from "./pages/PaymentCancelPage"; // Giả định bạn sẽ tạo trang này
 import NotFoundPage from "./pages/NotFoundPage"; // Import trang 404
 
 // Import Admin Pages
@@ -81,7 +80,6 @@ const AppRoutes = () => {
         <Route path="combos" element={<CombosPage />} />
         <Route path="combo/:comboId" element={<ComboDetailPage />} />
         <Route path="compare" element={<ComparePage />} />
-        <Route path="payment/cancel" element={<PaymentCancelPage />} />
         <Route path="product/:productId" element={<ProductDetailPage />} />
         <Route path="faq" element={<FaqPage />} />
         <Route path="pages/:slug" element={<ContentPage />} />

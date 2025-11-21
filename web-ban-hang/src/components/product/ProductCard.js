@@ -34,6 +34,8 @@ const ProductCard = ({ product }) => {
           ? product.salePrice
           : product.price),
       quantity: 1,
+      productId: product.id, // Explicitly set productId
+      id: product.defaultVariantId || product.id, // Use variant ID if available
     };
 
     // Chuyển đến trang checkout và truyền dữ liệu qua state
@@ -48,6 +50,7 @@ const ProductCard = ({ product }) => {
       ...product,
       // Nếu có biến thể, dùng ID biến thể mặc định, nếu không dùng ID sản phẩm
       id: product.defaultVariantId || product.id,
+      productId: product.id, // Explicitly set productId
     };
     addToCart(itemToAdd);
   };

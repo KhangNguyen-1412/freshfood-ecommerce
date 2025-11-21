@@ -265,15 +265,29 @@ export const AppProvider = ({ children }) => {
             getDoc(variantRef),
           ]);
 
-          if (productSnap.exists() && variantSnap.exists()) {
-            return {
-              ...productSnap.data(), // Dữ liệu sản phẩm cha
-              ...variantSnap.data(), // Ghi đè bằng dữ liệu biến thể (giá, ảnh, tên biến thể...)
-              id: variantId, // ID của item trong giỏ hàng là ID của biến thể
-              productId: productId, // Đảm bảo productId được giữ lại
-              quantity: cartData.quantity,
-            };
+          if (productSnap.exists()) {
+            // Trường hợp 1: Sản phẩm có biến thể hợp lệ
+            if (variantSnap.exists()) {
+              return {
+                ...productSnap.data(), // Dữ liệu sản phẩm cha
+                ...variantSnap.data(), // Ghi đè bằng dữ liệu biến thể (giá, ảnh, tên biến thể...)
+                id: variantId, // ID của item trong giỏ hàng là ID của biến thể
+                productId: productId, // Đảm bảo productId được giữ lại
+                quantity: cartData.quantity,
+              };
+            }
+            // Trường hợp 2: Sản phẩm đơn giản (không có biến thể riêng)
+            // Suy ra điều này nếu variantId được lưu giống với productId
+            else if (productId === variantId) {
+              return {
+                ...productSnap.data(), // Sử dụng dữ liệu sản phẩm chính
+                id: productId, // ID chính là ID sản phẩm
+                productId: productId,
+                quantity: cartData.quantity,
+              };
+            }
           }
+          // Nếu sản phẩm không tồn tại, hoặc là một biến thể của sản phẩm không tồn tại
           return null;
         });
         const cartItems = (await Promise.all(cartItemsPromises)).filter(

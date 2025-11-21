@@ -76,12 +76,14 @@ app.post("/create_vnpay_payment_url", (req, res) => {
 
   console.log("Params before hashing:", vnp_Params);
 
-  // Tạo chuỗi query string
-  const signData = qs.stringify(vnp_Params, { encode: false });
+  // Tạo chuỗi query string để tạo chữ ký
+  const signData = qs.stringify(vnp_Params, { encode: true });
 
   // Tạo chữ ký HMAC-SHA512
   const hmac = crypto.createHmac("sha512", secretKey);
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+
+  // Thêm chữ ký vào đối tượng tham số
   vnp_Params["vnp_SecureHash"] = signed;
 
   console.log("String to sign (signData):", signData);
@@ -89,6 +91,7 @@ app.post("/create_vnpay_payment_url", (req, res) => {
   console.log("==========================================================");
 
   // --- BƯỚC 4: TẠO URL THANH TOÁN HOÀN CHỈNH ---
+  // Nối chuỗi query string đã được mã hóa vào URL
   vnpUrl += "?" + qs.stringify(vnp_Params, { encode: false });
 
   // --- BƯỚC 5: TRẢ VỀ URL CHO FRONTEND ---
@@ -120,7 +123,7 @@ app.get("/vnpay_return", (req, res) => {
 
   const orderId = vnp_Params["vnp_TxnRef"];
   const responseCode = vnp_Params["vnp_ResponseCode"];
-  const frontendReturnUrl = process.env.FRONTEND_URL; // Ví dụ: http://localhost:3000
+  const frontendReturnUrl = process.env.REACT_APP_BASE_URL; // Ví dụ: http://localhost:3000
 
   console.log("Received vnp_Params:", vnp_Params);
   console.log("Received secureHash:", secureHash);

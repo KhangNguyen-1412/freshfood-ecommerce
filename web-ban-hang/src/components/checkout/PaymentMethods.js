@@ -7,7 +7,6 @@ const paymentOptions = [
   { value: "COD", label: "Thanh toán khi nhận hàng (COD)" },
   { value: "BANK_TRANSFER", label: "Chuyển khoản ngân hàng" },
   { value: "STRIPE_CARD", label: "Thanh toán qua thẻ (Visa, Mastercard)" },
-  { value: "VNPAY", label: "Thanh toán qua VNPay" },
   { value: "PAYPAL", label: "Thanh toán qua PayPal" },
 ];
 
@@ -16,13 +15,14 @@ const PaymentMethods = ({
   setSelectedPaymentMethod,
   isProcessing,
   finalTotal,
-  onPayPalApprove,
   theme,
+  onPayPalApprove,
+  validateOrder,
 }) => {
   return (
     <div className="relative">
       {/* Lớp phủ loading */}
-      {isProcessing && selectedPaymentMethod !== "PAYPAL" && (
+      {isProcessing && (
         <div className="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70 flex justify-center items-center z-10 rounded-lg">
           <Spinner />
         </div>
@@ -61,6 +61,7 @@ const PaymentMethods = ({
             isProcessing={isProcessing}
             finalTotal={finalTotal}
             onPayPalApprove={onPayPalApprove}
+            validateOrder={validateOrder}
           />
         )}
 

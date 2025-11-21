@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Hàm kiểm tra xem người dùng có phải là admin không
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Hàm kiểm tra xem người dùng có phải là staff không
+    function isStaff() {
+      let role = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return role == 'admin' || exists(/databases/$(database)/documents/roles/$(role));
+    }
+
+    // Hàm kiểm tra xem người dùng có phải là chủ sở hữu của tài liệu không
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Hàm kiểm tra người dùng đã đăng nhập chưa
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // === QUY TẮC PHÂN QUYỀN CHUNG ===
+    // Admin và Staff đều được phép đọc và liệt kê các collection quản lý
+    function isStaffOrAdmin() { 
+      return isStaff(); // isStaff đã bao gồm cả admin
+    }
+    
+    // Chỉ Admin mới được phép tạo, cập nhật và xóa
+    function isAdminOnly() {
+      return isAdmin();
+    }
+    // === KẾT THÚC QUY TẮC CHUNG ===
+
+    // Quy tắc cho collection 'users'
+    match /users/{userId} {
+    allow read: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdminOnly();
+      allow create, delete: if isAdminOnly();
+
+      match /{subcollection}/{docId} {
+        allow read, write, delete: if isOwner(userId) || isAdminOnly();
+      }
+    }
+
+    // === QUY TẮC CHO CHAT ===
+    match /conversations/{conversationId} {
+      // Khách hàng hoặc Admin/Staff có thể đọc/ghi cuộc trò chuyện
+      allow read, write: if request.auth.uid == resource.data.customerId || isStaffOrAdmin();
+      match /messages/{messageId} {
+        allow read, write: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.customerId == request.auth.uid || isStaffOrAdmin();
+      }
+    }
+    // === KẾT THÚC QUY TẮC MỚI ===
+
+    // === QUY TẮC SẢN PHẨM & LIÊN QUAN ===
+    match /products/{productId} {
+      // Cho phép mọi người đọc thông tin chi tiết sản phẩm,
+      // và thực hiện các câu lệnh query (list) trên collection.
+      allow read, list; 
+      
+      // Hàm kiểm tra quyền quản lý sản phẩm (admin hoặc có quyền 'products')
+      function canManageProducts() {
+        let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+        return userRole == 'admin' || get(/databases/$(database)/documents/roles/$(userRole)).data.permissions.products == true;
+      }
+      
+      // Chỉ admin mới được tạo sản phẩm mới
+      allow create: if isAdminOnly();
+      
+      // Admin hoặc người có quyền 'products' được cập nhật, xóa
+      // CẬP NHẬT: Cho phép khách hàng cập nhật purchaseCount khi mua hàng
+      allow update: if canManageProducts() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['purchaseCount']) && request.resource.data.purchaseCount > resource.data.purchaseCount);
+      
+      allow delete: if canManageProducts();
+      
+      match /variants/{variantId} {
+        // Cho phép mọi người đọc và liệt kê các biến thể
+        allow read, list;
+        // Chỉ admin/staff mới được ghi
+        allow write: if canManageProducts();
+        
+        // Di chuyển quy tắc inventory vào trong variants
+        match /inventory/{branchId} {
+          // CẬP NHẬT: Cho phép khách hàng cập nhật stock khi mua hàng (giảm số lượng)
+          allow read, list;
+          allow write: if canManageProducts() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock']) && request.resource.data.stock < resource.data.stock);
+        }
+      }
+      
+      match /reviews/{reviewId} {
+        allow read;
+        allow create: if isSignedIn();
+        allow update, delete: if isAdminOnly();
+      }
+      
+      match /questions/{questionId} {
+        allow read;
+        allow create: if isSignedIn();
+        allow update, delete: if isAdminOnly();
+      }
+    }
+    // === KẾT THÚC QUY TẮC SẢN PHẨM ===
+
+    // === QUY TẮC CHO CÁC COLLECTION QUẢN LÝ KHÁC ===
+   match /categories/{categoryId} {
+      allow read, list;
+      allow write: if isAdminOnly();
+    }
+
+    match /brands/{brandId} {
+      allow read, list;
+      allow write: if isAdminOnly();
+    }
+
+    match /branches/{branchId} {
+      // Cho phép mọi người đọc và liệt kê
+      allow read, list;
+      allow write: if isAdminOnly();
+    }
+
+    match /content/{contentId} { 
+        allow read; 
+        allow write: if isAdminOnly(); 
+    }
+
+    match /combos/{comboId} {
+      // Cho phép mọi người đọc và liệt kê combo
+      allow read, list;
+      // Chỉ admin mới được tạo, sửa, xóa
+      allow write: if isAdminOnly();
+    }
+
+    match /orders/{orderId} {
+      // Khách hàng hoặc Admin/Staff có thể đọc đơn hàng
+      allow read: if isOwner(resource.data.userId) || isStaffOrAdmin();
+      allow create: if isSignedIn();
+      allow update: if isStaffOrAdmin();
+    }
+    
+    match /promotions/{promoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdminOnly();
+    }
+    
+    match /purchases/{pId} { 
+      function canManagePurchases() {
+        let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+        return userRole == 'admin' || get(/databases/$(database)/documents/roles/$(userRole)).data.permissions.purchases == true;
+      }
+      allow read, write: if canManagePurchases(); }
+
+
+    match /roles/{rId} {
+      allow read: if isSignedIn();
+      allow write: if isAdminOnly();
+    }
+
+    match /newsletter/{nId} { allow read, write: if isAdminOnly(); }
+    // === KẾT THÚC QUY TẮC KHÁC ===
+    
+    // === QUY TẮC CHO COLLECTION GROUP ===
+    match /{path=**}/reviews/{reviewId} { allow read: if isStaffOrAdmin(); }
+    match /{path=**}/questions/{questionId} { allow read: if isStaffOrAdmin(); }
+    match /{path=**}/inventory/{inventoryId} { allow read: if isStaffOrAdmin(); }
+  }
+}

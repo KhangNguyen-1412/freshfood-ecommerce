@@ -11,7 +11,7 @@ export default function handler(req, res) {
   const vnp_TmnCode = process.env.VNP_TMNCODE;
   const vnp_HashSecret = process.env.VNP_HASHSECRET;
   const vnp_Url = process.env.VNP_URL;
-  const vnp_ReturnUrl = process.env.VNP_RETURN_URL;
+  const vnp_ReturnUrl = process.env.VNP_RETURNURL;
 
   if (!vnp_TmnCode || !vnp_HashSecret || !vnp_Url || !vnp_ReturnUrl) {
     return res
@@ -47,32 +47,21 @@ export default function handler(req, res) {
   vnp_Params["vnp_CreateDate"] = createDate;
 
   // Sắp xếp các tham số theo thứ tự alphabet
-  vnp_Params = sortObject(vnp_Params);
+  let sortedParams = {};
+  const keys = Object.keys(vnp_Params).sort();
+  for (const key of keys) {
+    sortedParams[key] = vnp_Params[key];
+  }
 
   const querystring = require("qs");
-  const signData = querystring.stringify(vnp_Params, { encode: false });
+  const signData = querystring.stringify(sortedParams, { encode: false });
   const hmac = crypto.createHmac("sha512", secretKey);
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
-  vnp_Params["vnp_SecureHash"] = signed;
-  vnpUrl += "?" + querystring.stringify(vnp_Params, { encode: false });
+  sortedParams["vnp_SecureHash"] = signed;
+  vnpUrl += "?" + querystring.stringify(sortedParams, { encode: true });
 
   res.status(200).json({ paymentUrl: vnpUrl });
 }
 
-// Hàm sắp xếp các thuộc tính của object theo thứ tự alphabet
-function sortObject(obj) {
-  let sorted = {};
-  let str = [];
-  let key;
-  for (key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      str.push(encodeURIComponent(key));
-    }
-  }
-  str.sort();
-  for (key = 0; key < str.length; key++) {
-    sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
-  }
-  return sorted;
-}
+// Hàm sắp xếp không còn cần thiết và đã được thay thế bằng logic sắp xếp trực tiếp

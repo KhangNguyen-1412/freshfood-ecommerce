@@ -26,10 +26,6 @@ import CartSummary from "../components/checkout/CartSummary";
 import "../styles/pages.css";
 import SEO from "../components/common/SEO";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-
-// Giả sử bạn có hàm gọi API backend để tạo URL thanh toán VNPay
-// const createVNPayPaymentAPI = async (orderInfo) => { ... };
 
 const CheckoutPage = () => {
   const { user, userData, cart, removeItemsFromCart, selectedBranch, theme } =
@@ -170,53 +166,73 @@ const CheckoutPage = () => {
     return newOrderRef.id; // Trả về ID của đơn hàng mới
   };
 
-  // Xử lý khi thanh toán PayPal được phê duyệt
-  const onPayPalApprove = async (data, actions) => {
-    setIsProcessing(true);
-    try {
-      // `data.orderID` là ID giao dịch từ PayPal
-      const details = await actions.order.capture();
-      toast.success(
-        `Thanh toán thành công bởi ${details.payer.name.given_name}!`
-      );
-      // Tạo đơn hàng trong Firestore sau khi thanh toán thành công
-      // Truyền ID giao dịch của PayPal vào hàm tạo đơn hàng
-      await createOrderInFirestore(details.id);
-      navigate(
-        "/payment-success?orderId=" + details.id + "&paymentMethod=PayPal",
-        { replace: true }
-      );
-    } catch (error) {
-      console.error("Lỗi khi xử lý thanh toán PayPal:", error);
-      toast.error("Đã có lỗi xảy ra với thanh toán PayPal.");
-      navigate("/payment-cancel?reason=PayPalError", { replace: true });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const createOrderInFirestore = async (paymentIntentId = null) => {
     await runTransaction(db, async (transaction) => {
+      // 1. READ PHASE: Check inventory for all items
+      const inventoryChecks = [];
+      
       for (const item of itemsToCheckout) {
-        // Kiểm tra tồn kho của biến thể tại chi nhánh đã chọn
+        // Fallback: If productId is missing, assume it's the same as item.id (simple product)
+        const productId = item.productId || item.id;
+        
+        if (!productId || !item.id || !selectedBranch?.id) {
+          throw new Error("Dữ liệu sản phẩm hoặc chi nhánh không hợp lệ.");
+        }
+
         const inventoryRef = doc(
           db,
           "products",
-          item.productId,
+          productId,
           "variants",
           item.id,
           "inventory",
           selectedBranch.id
         );
+        const productRef = doc(db, "products", productId);
+
+        // Queue the reads
         const inventoryDoc = await transaction.get(inventoryRef);
-        if (
-          !inventoryDoc.exists() ||
-          inventoryDoc.data().stock < item.quantity
-        ) {
-          throw new Error(`Sản phẩm "${item.name}" không đủ số lượng.`);
+        let productDoc = null;
+        let useGlobal = false;
+
+        if (!inventoryDoc.exists()) {
+           // If branch inventory missing, check global product doc
+           productDoc = await transaction.get(productRef);
+           useGlobal = true;
         }
+
+        inventoryChecks.push({
+           item,
+           inventoryRef,
+           productRef,
+           inventoryDoc,
+           productDoc,
+           useGlobal
+        });
       }
 
+      // 2. VALIDATION PHASE: Check stock availability based on reads
+      for (const check of inventoryChecks) {
+         const { item, inventoryDoc, productDoc, useGlobal } = check;
+         
+         if (useGlobal) {
+            if (!productDoc.exists()) {
+               throw new Error(`Sản phẩm "${item.name}" không tồn tại.`);
+            }
+            const globalStock = productDoc.data().stock;
+            if (typeof globalStock !== 'number' || globalStock < item.quantity) {
+               const currentStock = typeof globalStock === 'number' ? globalStock : "N/A";
+               throw new Error(`Sản phẩm "${item.name}" không đủ số lượng (Kho tổng: ${currentStock}, Yêu cầu: ${item.quantity})`);
+            }
+         } else {
+            if (inventoryDoc.data().stock < item.quantity) {
+               const currentStock = inventoryDoc.data().stock;
+               throw new Error(`Sản phẩm "${item.name}" không đủ số lượng tại chi nhánh này. (Kho: ${currentStock}, Yêu cầu: ${item.quantity})`);
+            }
+         }
+      }
+
+      // 3. WRITE PHASE: Create order and update inventory
       const newOrderRef = doc(collection(db, "orders"));
       const orderData = {
         userId: user.uid,
@@ -236,25 +252,26 @@ const CheckoutPage = () => {
         })),
         totalAmount: finalTotal,
       };
+      
       transaction.set(newOrderRef, orderData);
-      for (const item of itemsToCheckout) {
-        const inventoryRef = doc(
-          db,
-          "products",
-          item.productId,
-          "variants",
-          item.id,
-          "inventory",
-          selectedBranch.id
-        );
-        const productRef = doc(db, "products", item.productId);
-        transaction.update(inventoryRef, { stock: increment(-item.quantity) });
-        transaction.update(productRef, {
-          // Vẫn cập nhật purchaseCount của sản phẩm cha
-          purchaseCount: increment(item.quantity),
-        });
+      
+      for (const check of inventoryChecks) {
+        const { item, inventoryRef, productRef, useGlobal } = check;
+        
+        if (useGlobal) {
+           transaction.update(productRef, { 
+             stock: increment(-item.quantity),
+             purchaseCount: increment(item.quantity)
+           });
+        } else {
+           transaction.update(inventoryRef, { stock: increment(-item.quantity) });
+           transaction.update(productRef, {
+             purchaseCount: increment(item.quantity),
+           });
+        }
       }
     });
+    
     const purchasedItemIds = itemsToCheckout.map((item) => item.id);
     if (!location.state?.buyNowItem) {
       await removeItemsFromCart(purchasedItemIds);
@@ -323,46 +340,21 @@ const CheckoutPage = () => {
     }
   };
 
-  // Xử lý cho VNPay (đã cập nhật logic)
-  const handleVNPay = async () => {
-    // Bước 1: Tạo đơn hàng với trạng thái "Chờ thanh toán"
-    const orderId = await createPendingOrder();
-    if (!orderId) {
-      throw new Error("Không thể tạo đơn hàng.");
+  // Xử lý cho PayPal
+  const handlePayPalApprove = async (data, actions) => {
+    try {
+      const details = await actions.order.capture();
+      console.log("PayPal Transaction Details:", details);
+
+      if (details.status === "COMPLETED") {
+        await createOrderInFirestore(details.id);
+        toast.success(`Thanh toán PayPal thành công!`);
+        navigate("/profile", { replace: true });
+      }
+    } catch (error) {
+      console.error("Lỗi PayPal:", error);
+      toast.error("Thanh toán PayPal thất bại: " + error.message);
     }
-
-    const apiUrl = process.env.REACT_APP_API_URL;
-    if (!apiUrl) throw new Error("API URL chưa được cấu hình.");
-
-    // Bước 2: Gọi API backend để tạo URL thanh toán
-    // Đây là ví dụ, bạn cần tạo API endpoint này ở backend
-    const res = await fetch(apiUrl + "/create_vnpay_payment_url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        orderId: orderId,
-        amount: Math.round(finalTotal),
-        orderInfo: `Thanh toan don hang #${orderId.substring(0, 8)}`,
-      }),
-    });
-
-    // Kiểm tra xem response có phải là JSON hợp lệ không
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Lỗi từ server: ${res.status} - ${errorText}`);
-    }
-
-    const { paymentUrl, error } = await res.json();
-    if (error) throw new Error(error);
-
-    // Chỉ xóa giỏ hàng khi đã có URL thanh toán và sắp chuyển hướng
-    const purchasedItemIds = itemsToCheckout.map((item) => item.id);
-    if (!location.state?.buyNowItem) {
-      await removeItemsFromCart(purchasedItemIds);
-    }
-
-    // Bước 3: Chuyển hướng người dùng đến cổng thanh toán
-    window.location.href = paymentUrl;
   };
 
   const handlePlaceOrder = async () => {
@@ -386,11 +378,8 @@ const CheckoutPage = () => {
         case "STRIPE_CARD":
           await handleStripePayment();
           break;
-        case "VNPAY": // Ví dụ thêm VNPay
-          await handleVNPay();
-          break;
         case "PAYPAL":
-          // For PayPal, the action is handled by the PayPalButtons component itself.
+          toast.info("Vui lòng sử dụng các nút PayPal để hoàn tất thanh toán.");
           break;
         default:
           throw new Error("Phương thức thanh toán không hợp lệ.");
@@ -401,6 +390,14 @@ const CheckoutPage = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const validateOrder = () => {
+    if (!user || !selectedAddressId || !shippingInfo.name || !selectedBranch) {
+      toast.error("Vui lòng điền đầy đủ thông tin giao hàng và chọn chi nhánh.");
+      return false;
+    }
+    return true;
   };
 
   return (
@@ -440,8 +437,9 @@ const CheckoutPage = () => {
               setSelectedPaymentMethod={setSelectedPaymentMethod}
               isProcessing={isProcessing}
               finalTotal={finalTotal}
-              onPayPalApprove={onPayPalApprove}
               theme={theme}
+              onPayPalApprove={handlePayPalApprove}
+              validateOrder={validateOrder}
             />
           </div>
           <CartSummary
