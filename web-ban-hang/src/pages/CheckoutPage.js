@@ -105,7 +105,7 @@ const CheckoutPage = () => {
       }
     });
     return () => unsubscribe();
-  }, [user]); // Tối ưu hóa 2: Bỏ selectedAddressId khỏi dependency array
+  }, [user, selectedAddressId]); // Tối ưu hóa 2: Bỏ selectedAddressId khỏi dependency array
 
   useEffect(() => {
     const selected = addresses.find((addr) => addr.id === selectedAddressId);
@@ -357,6 +357,51 @@ const CheckoutPage = () => {
     }
   };
 
+  // Xử lý cho VNPay
+  const handleVNPayPayment = async () => {
+    try {
+      // 1. Tạo đơn hàng pending trước
+      const orderId = await createPendingOrder();
+      
+      // 2. Gọi API tạo URL thanh toán
+      // Lưu ý: URL này phải trỏ đúng đến endpoint serverless hoặc backend của bạn
+      // 2. Gọi API tạo URL thanh toán
+      // Lưu ý: URL này phải trỏ đúng đến endpoint serverless hoặc backend của bạn
+      // const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001"; 
+      // Force local server for VNPay to avoid port mismatch with .env
+      const apiUrl = "http://localhost:3001"; 
+      // Nếu đang chạy local với `npm start` (CRA), thư mục `api` không tự động thành API endpoint trừ khi dùng Vercel CLI hoặc proxy.
+      // Tạm thời giả định người dùng đã setup proxy hoặc serverless function.
+      
+      const response = await fetch(`${apiUrl}/api/create_vnpay_payment_url`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+          amount: finalTotal,
+          orderInfo: `Thanh toan don hang ${orderId}`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Không thể tạo URL thanh toán VNPay");
+      }
+
+      const data = await response.json();
+      if (data.paymentUrl) {
+        // 3. Chuyển hướng sang VNPay
+        window.location.href = data.paymentUrl;
+      } else {
+        throw new Error("API không trả về paymentUrl");
+      }
+    } catch (error) {
+      console.error("Lỗi VNPay:", error);
+      toast.error(`Lỗi khởi tạo VNPay: ${error.message}`);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     if (!user || !selectedAddressId || !shippingInfo.name || !selectedBranch) {
       toast.error(
@@ -380,6 +425,9 @@ const CheckoutPage = () => {
           break;
         case "PAYPAL":
           toast.info("Vui lòng sử dụng các nút PayPal để hoàn tất thanh toán.");
+          break;
+        case "VNPAY":
+          await handleVNPayPayment();
           break;
         default:
           throw new Error("Phương thức thanh toán không hợp lệ.");

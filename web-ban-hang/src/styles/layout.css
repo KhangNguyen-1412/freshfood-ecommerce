@@ -68,3 +68,13 @@
 .admin-main-content {
   @apply flex-1 p-8 overflow-y-auto;
 }
+
+/* Utility Classes */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

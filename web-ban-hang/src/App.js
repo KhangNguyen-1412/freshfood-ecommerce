@@ -32,6 +32,7 @@ import ComparePage from "./pages/ComparePage"; // Import trang so sánh
 import CombosPage from "./pages/CombosPage"; // Import trang combo
 import ComboDetailPage from "./pages/ComboDetailPage"; // Import trang chi tiết combo
 import NotFoundPage from "./pages/NotFoundPage"; // Import trang 404
+import NotificationsPage from "./pages/NotificationsPage"; // Import trang thông báo
 
 // Import Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -76,6 +77,7 @@ const AppRoutes = () => {
         <Route path="newsletter" element={<NewsletterSignupPage />} />
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="payment/success" element={<PaymentSuccessPage />} />
         <Route path="combos" element={<CombosPage />} />
         <Route path="combo/:comboId" element={<ComboDetailPage />} />

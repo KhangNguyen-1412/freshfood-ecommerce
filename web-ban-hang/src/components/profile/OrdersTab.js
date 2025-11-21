@@ -127,11 +127,11 @@ const OrdersTab = ({ user }) => {
                   <p className="font-bold">
                     Tổng tiền: {formatCurrency(order.totalAmount)}
                   </p>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex flex-wrap items-center justify-end gap-2 mt-2 md:mt-0">
                     {order.status === "Chờ thanh toán" && (
                       <button
                         onClick={() => handlePayNow(order)}
-                        className="text-sm text-green-600 hover:underline font-semibold"
+                        className="text-sm text-green-600 hover:underline font-semibold whitespace-nowrap"
                       >
                         Thanh toán ngay
                       </button>
@@ -140,7 +140,7 @@ const OrdersTab = ({ user }) => {
                       order.status === "Chờ thanh toán") && (
                       <button
                         onClick={() => handleCancelOrder(order.id)}
-                        className="text-sm text-red-500 hover:underline"
+                        className="text-sm text-red-500 hover:underline whitespace-nowrap"
                       >
                         Hủy đơn
                       </button>
@@ -151,7 +151,7 @@ const OrdersTab = ({ user }) => {
                         <Link
                           to={`/profile/review/${order.id}`}
                           state={{ order: order }}
-                          className="text-sm text-green-600 hover:underline font-semibold"
+                          className="text-sm text-green-600 hover:underline font-semibold whitespace-nowrap"
                         >
                           Đánh giá
                         </Link>
@@ -160,7 +160,7 @@ const OrdersTab = ({ user }) => {
                       order.status === "Hoàn thành") && (
                       <button
                         onClick={() => handleReorder(order.items)}
-                        className="text-sm text-purple-600 hover:underline font-semibold"
+                        className="text-sm text-purple-600 hover:underline font-semibold whitespace-nowrap"
                       >
                         Mua lại
                       </button>
@@ -168,7 +168,7 @@ const OrdersTab = ({ user }) => {
                     <Link
                       to={`/order/${order.id}`}
                       state={{ order: order }}
-                      className="text-sm text-blue-500 hover:underline font-semibold"
+                      className="text-sm text-blue-500 hover:underline font-semibold whitespace-nowrap"
                     >
                       Xem chi tiết
                     </Link>

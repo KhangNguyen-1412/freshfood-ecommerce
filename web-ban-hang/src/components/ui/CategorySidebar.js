@@ -1,40 +1,35 @@
 import React, { useState, useEffect } from "react";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { useAppContext } from "../../context/AppContext";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import "../../styles/ui.css";
 
 const CategorySidebar = ({ onSelectCategory }) => {
+  const { categories: allCategories } = useAppContext();
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [openParentId, setOpenParentId] = useState(null);
 
   useEffect(() => {
-    const q = query(collection(db, "categories"), orderBy("name"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const cats = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      const parentCategories = cats.filter((cat) => !cat.parentId);
+    if (allCategories.length > 0) {
+      const parentCategories = allCategories.filter((cat) => !cat.parentId);
       const structuredCategories = parentCategories.map((parent) => ({
         ...parent,
-        children: cats.filter((child) => child.parentId === parent.id),
+        children: allCategories.filter((child) => child.parentId === parent.id),
       }));
       setCategories(structuredCategories);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    }
+  }, [allCategories]);
 
   const handleParentClick = (parentId) => {
     setOpenParentId((prevId) => (prevId === parentId ? null : parentId));
     onSelectCategory(parentId);
   };
 
-  if (loading) {
-    return <aside className="w-full md:w-64 p-4">Đang tải danh mục...</aside>;
+  if (allCategories.length === 0) {
+    return <aside className="hidden md:block w-full md:w-64 p-4">Đang tải danh mục...</aside>;
   }
 
   return (
-    <aside className="category-sidebar">
+    <aside className="category-sidebar hidden md:block">
       <h2 className="category-sidebar-title">Danh mục sản phẩm</h2>
       <nav>
         <ul>

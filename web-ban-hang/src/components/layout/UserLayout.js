@@ -8,6 +8,8 @@ import CompareBar from "../common/CompareBar"; // Import CompareBar
 import Breadcrumbs from "../common/Breadcrumbs";
 import ChatWidget from "../chat/ChatWidget"; // Import ChatWidget
 
+import MobileBottomNav from "./MobileBottomNav";
+
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
   in: { opacity: 1, y: 0 },
@@ -25,7 +27,7 @@ const UserLayout = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
-      <main className="flex-grow">
+      <main className="flex-grow pb-16 md:pb-0"> {/* Add padding bottom for mobile nav */}
         <BranchSelector />
         <Breadcrumbs />
         <AnimatePresence mode="wait">
@@ -44,6 +46,7 @@ const UserLayout = () => {
       <CompareBar /> {/* Thêm CompareBar ở đây */}
       <Footer />
       <ChatWidget /> {/* Thêm ChatWidget ở đây */}
+      <MobileBottomNav />
     </div>
   );
 };

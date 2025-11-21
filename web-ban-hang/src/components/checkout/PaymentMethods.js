@@ -8,6 +8,7 @@ const paymentOptions = [
   { value: "BANK_TRANSFER", label: "Chuyển khoản ngân hàng" },
   { value: "STRIPE_CARD", label: "Thanh toán qua thẻ (Visa, Mastercard)" },
   { value: "PAYPAL", label: "Thanh toán qua PayPal" },
+  { value: "VNPAY", label: "Thanh toán qua VNPay" },
 ];
 
 const PaymentMethods = ({

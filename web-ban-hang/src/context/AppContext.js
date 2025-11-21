@@ -40,6 +40,8 @@ export const AppProvider = ({ children }) => {
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [brands, setBrands] = useState([]);
   const [brandFilter, setBrandFilter] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   // State mới cho sản phẩm đã xem
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
@@ -50,6 +52,26 @@ export const AppProvider = ({ children }) => {
   const [compareList, setCompareList] = useState(
     () => JSON.parse(localStorage.getItem("compareList")) || []
   );
+
+  // --- Notification Logic (Moved from Header) ---
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (user) {
+      const notifQuery = query(
+        collection(db, "users", user.uid, "notifications"),
+        orderBy("createdAt", "desc")
+      );
+      const unsubscribe = onSnapshot(notifQuery, (snapshot) => {
+        setNotifications(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      });
+      return () => unsubscribe();
+    } else {
+      setNotifications([]);
+    }
+  }, [user]);
 
   const handleSelectBranch = (branch) => {
     setSelectedBranch(branch);
@@ -228,9 +250,21 @@ export const AppProvider = ({ children }) => {
       (error) => console.error("Lỗi khi tải danh sách thương hiệu:", error)
     );
 
+    const qCategories = query(collection(db, "categories"), orderBy("name"));
+    const unsubscribeCategories = onSnapshot(
+      qCategories,
+      (snapshot) => {
+        setCategories(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      },
+      (error) => console.error("Lỗi khi tải danh sách danh mục:", error)
+    );
+
     fetchBranchesAndRestoreSelection();
 
-    return () => unsubscribeBrands();
+    return () => {
+      unsubscribeBrands();
+      unsubscribeCategories();
+    };
   }, []);
 
   // Effect quản lý giỏ hàng
@@ -464,6 +498,37 @@ export const AppProvider = ({ children }) => {
     );
   }
 
+
+
+  const markAsRead = async (notificationId) => {
+    if (!user) return;
+    const notifRef = doc(db, "users", user.uid, "notifications", notificationId);
+    await updateDoc(notifRef, { isRead: true });
+  };
+
+  const markAllAsRead = async () => {
+    if (!user) return;
+    const batch = writeBatch(db);
+    const unreadNotifications = notifications.filter((n) => !n.isRead);
+    
+    if (unreadNotifications.length === 0) return;
+
+    unreadNotifications.forEach((notification) => {
+      const notifRef = doc(db, "users", user.uid, "notifications", notification.id);
+      batch.update(notifRef, { isRead: true });
+    });
+
+    try {
+      await batch.commit();
+      toast.info("Đã đánh dấu tất cả là đã đọc.");
+    } catch (error) {
+      console.error("Lỗi khi đánh dấu đã đọc:", error);
+      toast.error("Đã có lỗi xảy ra.");
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
   // Giá trị được cung cấp bởi Context cho toàn bộ ứng dụng
   const value = {
     user,
@@ -492,6 +557,9 @@ export const AppProvider = ({ children }) => {
     brands,
     brandFilter,
     setBrandFilter,
+    categories,
+    selectedCategory,
+    setSelectedCategory,
     removeItemsFromCart,
     reorderItems, // Thêm hàm này vào giá trị của context
     recentlyViewed,
@@ -501,6 +569,11 @@ export const AppProvider = ({ children }) => {
     toggleCompare,
     removeFromCompare,
     clearCompareList,
+    // Notification exports
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

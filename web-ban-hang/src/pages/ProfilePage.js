@@ -8,12 +8,14 @@ import {
   addDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { updateProfile } from "firebase/auth";
+import { updateProfile, signOut } from "firebase/auth";
 import { db, auth } from "../firebase/config";
 import { useAppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import SEO from "../components/common/SEO";
+import AuthModal from "../components/auth/AuthModal";
 
 // Component imports
 import Spinner from "../components/common/Spinner";
@@ -138,12 +140,43 @@ const ProfilePage = () => {
     setEditingAddress(null);
   };
 
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+      await signOut(auth);
+      navigate("/");
+      toast.success("Đã đăng xuất thành công.");
+    }
+  };
+
   if (loading) return <Spinner />;
+
+  if (!user) {
+    return (
+      <div className="page-container px-4 md:px-8 flex flex-col items-center justify-center min-h-[60vh]">
+        <h1 className="text-2xl font-bold mb-4">Tài khoản của tôi</h1>
+        <p className="text-gray-600 mb-6 text-center">
+          Vui lòng đăng nhập để xem thông tin tài khoản và đơn hàng của bạn.
+        </p>
+        <button
+          onClick={() => setShowAuthModal(true)}
+          className="bg-green-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors"
+        >
+          Đăng nhập / Đăng ký
+        </button>
+        {showAuthModal && (
+          <AuthModal onClose={() => setShowAuthModal(false)} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
       <SEO title={`Tài khoản của ${userData?.displayName || "bạn"}`} />
-      <div className="page-container">
+      <div className="page-container px-4 md:px-8">
         <h1 className="page-title">Tài khoản của tôi</h1>
 
         {/* Phần thông tin cá nhân */}

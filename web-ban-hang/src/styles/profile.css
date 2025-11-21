@@ -1,6 +1,12 @@
 /* --- ProfileTabs Styles --- */
 .profile-tabs-nav {
-  @apply relative flex space-x-8 border-b dark:border-gray-700;
+  @apply relative flex space-x-8 border-b dark:border-gray-700 overflow-x-auto whitespace-nowrap;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.profile-tabs-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .profile-tab-button {

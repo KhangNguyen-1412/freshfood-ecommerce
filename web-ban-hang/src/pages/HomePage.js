@@ -21,16 +21,22 @@ import Pagination from "../components/common/Pagination";
 import "../styles/pages.css";
 
 const HomePage = () => {
-  const { searchQuery, brands, brandFilter, setBrandFilter } = useAppContext();
+  const {
+    searchQuery,
+    brands,
+    brandFilter,
+    setBrandFilter,
+    categories,
+    selectedCategory,
+    setSelectedCategory,
+  } = useAppContext();
   const [mainProducts, setMainProducts] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [saleProducts, setSaleProducts] = useState([]);
   const [categoriesMap, setCategoriesMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState("Tất cả sản phẩm");
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [sortOption, setSortOption] = useState("latest");
-  const [allCategories, setAllCategories] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const PRODUCTS_PER_PAGE = 9;
@@ -70,16 +76,8 @@ const HomePage = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const categoriesSnapshot = await getDocs(
-          query(collection(db, "categories"))
-        );
-        const categoriesData = categoriesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setAllCategories(categoriesData);
-        const catMap = categoriesSnapshot.docs.reduce(
-          (acc, doc) => ({ ...acc, [doc.id]: doc.data().name }),
+        const catMap = categories.reduce(
+          (acc, cat) => ({ ...acc, [cat.id]: cat.name }),
           {}
         );
         setCategoriesMap(catMap);
@@ -116,9 +114,11 @@ const HomePage = () => {
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu nổi bật:", error);
       }
-    };
-    fetchInitialData();
-  }, []);
+    }
+    if (categories.length > 0) {
+      fetchInitialData();
+    }
+  }, [categories]);
 
   useEffect(() => {
     if (Object.keys(categoriesMap).length === 0) return;
@@ -132,7 +132,7 @@ const HomePage = () => {
           constraints.push(where("brandId", "==", brandFilter));
         }
         if (selectedCategory) {
-          const childCategoryIds = allCategories
+          const childCategoryIds = categories
             .filter((cat) => cat.parentId === selectedCategory)
             .map((cat) => cat.id);
           const idsToQuery = [selectedCategory, ...childCategoryIds];
@@ -186,7 +186,7 @@ const HomePage = () => {
     selectedCategory,
     searchQuery,
     categoriesMap,
-    allCategories,
+    categories,
     brandFilter,
   ]);
 
